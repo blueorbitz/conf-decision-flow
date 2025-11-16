@@ -1,0 +1,19 @@
+modules:
+  jira:adminPage:
+    - key: decision-flow-admin-page
+      resource: main
+      resolver:
+        function: resolver
+      title: Decision flow
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: static/admin-page/build
+app:
+  runtime:
+    name: nodejs22.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/7342c3eb-9504-43fc-bdbf-d7bf32e7dce7
