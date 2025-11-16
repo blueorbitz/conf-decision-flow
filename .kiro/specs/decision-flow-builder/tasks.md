@@ -14,7 +14,7 @@
   - Validate manifest syntax using forge lint command
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 3. Setup admin page dependencies and structure
+- [x] 3. Setup admin page dependencies and structure
   - Update static/admin-page/package.json with @xyflow/react v12 and required Atlaskit packages
   - Install dependencies using npm install in static/admin-page directory
   - Create component directory structure (components/, components/nodes/, styles/)
