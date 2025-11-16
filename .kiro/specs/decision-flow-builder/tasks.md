@@ -7,7 +7,7 @@
   - Implement Jira API integration for field updates, label additions, and comment creation using .asUser()
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 4.6, 4.7, 4.8, 4.9, 4.10, 4.11, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6_
 
-- [ ] 2. Update manifest configuration
+- [x] 2. Update manifest configuration
   - Add jira:issuePanel module configuration pointing to issue-panel build directory
   - Add required scopes (read:jira-work, write:jira-work, storage:app) if not already present
   - Configure issue-panel resource pointing to static/issue-panel/build

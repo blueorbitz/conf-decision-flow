@@ -5,12 +5,23 @@ modules:
       resolver:
         function: resolver
       title: Decision flow
+  jira:issuePanel:
+    - key: decision-flow-issue-panel
+      resource: issue-panel
+      resolver:
+        function: resolver
+      title: Decision Flow
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
   function:
     - key: resolver
       handler: index.handler
 resources:
   - key: admin-page
     path: static/admin-page/build
+    tunnel:
+      port: 3000
+  - key: issue-panel
+    path: static/admin-page/build # to replace with static/issue-panel/build when directory is created
     tunnel:
       port: 3000
 permissions:
