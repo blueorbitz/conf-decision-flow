@@ -4,9 +4,11 @@ import DynamicTable from '@atlaskit/dynamic-table';
 import Button, { IconButton } from '@atlaskit/button/new';
 import Spinner from '@atlaskit/spinner';
 import Lozenge from '@atlaskit/lozenge';
+import Heading from '@atlaskit/heading';
 import { token } from '@atlaskit/tokens';
 import EditIcon from '@atlaskit/icon/core/edit';
 import TrashIcon from '@atlaskit/icon/core/delete';
+import { Box, Text } from '@atlaskit/primitives';
 
 /**
  * FlowList Component
@@ -112,7 +114,7 @@ function FlowList({ onCreateFlow, onEditFlow }) {
             {
                 key: 'projects',
                 content: (
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                    <Box style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                         {flow.projectKeys && flow.projectKeys.length > 0 ? (
                             flow.projectKeys.map((projectKey) => (
                                 <Lozenge key={projectKey} appearance="default">
@@ -122,13 +124,13 @@ function FlowList({ onCreateFlow, onEditFlow }) {
                         ) : (
                             '-'
                         )}
-                    </div>
+                    </Box>
                 ),
             },
             {
                 key: 'actions',
                 content: (
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <Box style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <IconButton
                             icon={EditIcon}
                             label="Edit flow"
@@ -139,7 +141,7 @@ function FlowList({ onCreateFlow, onEditFlow }) {
                             label="Delete flow"
                             onClick={() => handleDelete(flow.id, flow.name)}
                         />
-                    </div>
+                    </Box>
                 ),
             },
         ],
@@ -150,14 +152,14 @@ function FlowList({ onCreateFlow, onEditFlow }) {
      */
     if (isLoading) {
         return (
-            <div style={{
+            <Box style={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
                 minHeight: '400px'
             }}>
                 <Spinner size="large" />
-            </div>
+            </Box>
         );
     }
 
@@ -166,12 +168,12 @@ function FlowList({ onCreateFlow, onEditFlow }) {
      */
     if (error) {
         return (
-            <div style={{ padding: '20px', textAlign: 'center' }}>
+            <Box style={{ padding: '20px', textAlign: 'center' }}>
                 <p style={{ color: 'red', marginBottom: '16px' }}>{error}</p>
                 <Button appearance="primary" onClick={loadFlows}>
                     Retry
                 </Button>
-            </div>
+            </Box>
         );
     }
 
@@ -179,42 +181,46 @@ function FlowList({ onCreateFlow, onEditFlow }) {
      * Main render
      */
     return (
-        <div style={{ padding: '20px' }}>
+        <Box style={{ padding: '20px' }}>
             {/* Header section with title and create button */}
-            <div style={{
+            <Box style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 marginBottom: '20px'
             }}>
-                <h1 style={{ margin: 0 }}>Decision Flows</h1>
+                <Heading size="large">Decision Flows</Heading>
                 <Button
                     appearance="primary"
                     onClick={onCreateFlow}
                 >
                     Create New Flow
                 </Button>
-            </div>
+            </Box>
 
             {/* Empty state when no flows exist */}
             {flows.length === 0 ? (
-                <div style={{
+                <Box style={{
                     textAlign: 'center',
                     padding: '60px 20px',
                     backgroundColor: token('color.background.input'),
                     borderRadius: '8px'
                 }}>
-                    <h2 style={{ marginBottom: '8px' }}>No flows yet</h2>
-                    <p style={{ color: token('color.text.subtle'), marginBottom: '20px' }}>
-                        Create your first decision flow to get started
-                    </p>
+                    <Box style={{ marginBottom: '8px' }}>
+                        <Heading size="medium">No flows yet</Heading>
+                    </Box>
+                    <Box style={{ marginBottom: '20px' }}>
+                        <Text as="p" color='color.text.subtle'>
+                            Create your first decision flow to get started
+                        </Text>
+                    </Box>
                     <Button
                         appearance="primary"
                         onClick={onCreateFlow}
                     >
                         Create New Flow
                     </Button>
-                </div>
+                </Box>
             ) : (
                 /* Table displaying all flows */
                 <DynamicTable
@@ -227,7 +233,7 @@ function FlowList({ onCreateFlow, onEditFlow }) {
                     defaultSortOrder="ASC"
                 />
             )}
-        </div>
+        </Box>
     );
 }
 

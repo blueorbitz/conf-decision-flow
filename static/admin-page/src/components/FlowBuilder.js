@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { invoke } from '@forge/bridge';
 import {
     ReactFlow,
@@ -13,6 +13,8 @@ import {
 import '@xyflow/react/dist/style.css';
 import Button from '@atlaskit/button/new';
 import Spinner from '@atlaskit/spinner';
+import Heading from '@atlaskit/heading';
+import { Box, Flex, Stack, xcss } from '@atlaskit/primitives';
 import { getGlobalTheme, token } from '@atlaskit/tokens';
 
 /**
@@ -43,28 +45,14 @@ function FlowBuilder({ flowId, onCancel }) {
     // UI state
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [selectedNode, setSelectedNode] = useState(null);
-    const [showSettings, setShowSettings] = useState(false);
     
     // Counter for generating unique node IDs
     const [nodeIdCounter, setNodeIdCounter] = useState(1);
 
     /**
-     * Load existing flow data when editing (flowId is provided)
-     */
-    useEffect(() => {
-        if (flowId) {
-            loadFlow();
-        } else {
-            // For new flows, add a default Start node
-            addStartNode();
-        }
-    }, [flowId]);
-
-    /**
      * Fetch flow data from backend
      */
-    const loadFlow = async () => {
+    const loadFlow = useCallback(async () => {
         setIsLoading(true);
         try {
             const flow = await invoke('getFlow', { flowId });
@@ -93,12 +81,12 @@ function FlowBuilder({ flowId, onCancel }) {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [flowId, setNodes, setEdges]);
 
     /**
      * Add a default Start node to the canvas (for new flows)
      */
-    const addStartNode = () => {
+    const addStartNode = useCallback(() => {
         const startNode = {
             id: 'start-1',
             type: 'default',
@@ -110,20 +98,32 @@ function FlowBuilder({ flowId, onCancel }) {
             style: {
                 backgroundColor: token('color.background.success'),
                 color: token('color.text.inverse'),
-                border: `1px solid ${token('color.border.success')}`,
+                border: `2px solid ${token('color.border.success')}`,
                 borderRadius: '50%',
                 width: 80,
                 height: 80,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '12px',
+                fontSize: '14px',
                 fontWeight: 'bold'
             }
         };
         setNodes([startNode]);
         setNodeIdCounter(2);
-    };
+    }, [setNodes]);
+
+    /**
+     * Load existing flow data when editing (flowId is provided)
+     */
+    useEffect(() => {
+        if (flowId) {
+            loadFlow();
+        } else {
+            // For new flows, add a default Start node
+            addStartNode();
+        }
+    }, [flowId, loadFlow, addStartNode]);
 
     /**
      * Handle edge connections between nodes
@@ -136,8 +136,8 @@ function FlowBuilder({ flowId, onCancel }) {
     /**
      * Handle node selection
      */
-    const onNodeClick = useCallback((event, node) => {
-        setSelectedNode(node);
+    const onNodeClick = useCallback((_event, _node) => {
+        // Node selection logic will be implemented in future tasks
     }, []);
 
     /**
@@ -265,13 +265,11 @@ function FlowBuilder({ flowId, onCancel }) {
         // Validate flow metadata
         if (!flowMetadata.name || flowMetadata.name.trim() === '') {
             alert('Please provide a flow name in Settings before saving.');
-            setShowSettings(true);
             return;
         }
 
         if (!flowMetadata.projectKeys || flowMetadata.projectKeys.length === 0) {
             alert('Please bind the flow to at least one project in Settings before saving.');
-            setShowSettings(true);
             return;
         }
 
@@ -303,7 +301,6 @@ function FlowBuilder({ flowId, onCancel }) {
      * Handle Settings button click
      */
     const handleSettings = () => {
-        setShowSettings(true);
         // Settings modal will be implemented in a future task
         // For now, use a simple prompt
         const name = prompt('Flow Name:', flowMetadata.name);
@@ -324,7 +321,6 @@ function FlowBuilder({ flowId, onCancel }) {
                 });
             }
         }
-        setShowSettings(false);
     };
 
     /**
@@ -332,14 +328,14 @@ function FlowBuilder({ flowId, onCancel }) {
      */
     if (isLoading) {
         return (
-            <div style={{
+            <Box style={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
                 minHeight: '600px'
             }}>
                 <Spinner size="large" />
-            </div>
+            </Box>
         );
     }
 
@@ -347,24 +343,25 @@ function FlowBuilder({ flowId, onCancel }) {
      * Main render
      */
     return (
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+         <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column', padding: token('space.200') }}>
             {/* Top Toolbar */}
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '12px 20px',
-                backgroundColor: token('elevation.surface'),
-                borderBottom: `1px solid ${token('color.border')}`,
-                gap: '12px'
-            }}>
-                <div>
-                    <h2 style={{ margin: 0, fontSize: '18px' }}>
+            <Flex 
+                xcss={xcss({
+                    padding: token('space.150'),
+                    backgroundColor: token('elevation.surface'),
+                    borderBottom: `${token('border.width')} solid ${token('color.border')}`,
+                })}
+                justifyContent="space-between" 
+                alignItems="center" 
+                gap="space.150"
+            >
+                <Box>
+                    <Heading size="small">
                         {flowId ? `Edit Flow: ${flowMetadata.name || 'Untitled'}` : 'Create New Flow'}
-                    </h2>
-                </div>
+                    </Heading>
+                </Box>
                 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <Flex gap="space.100">
                     <Button
                         appearance="subtle"
                         onClick={handleSettings}
@@ -385,34 +382,25 @@ function FlowBuilder({ flowId, onCancel }) {
                     >
                         Cancel
                     </Button>
-                </div>
-            </div>
+                </Flex>
+            </Flex>
 
             {/* Main Content Area */}
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            <Box style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 {/* Node Palette Sidebar */}
-                <div style={{
+                <Box style={{
                     width: '200px',
                     backgroundColor: token('elevation.surface.raised'),
-                    borderRight: `1px solid ${token('color.border')}`,
-                    padding: '16px',
+                    borderRight: `${token('border.width')} solid ${token('color.border')}`,
+                    padding: token('space.200'),
                     overflowY: 'auto'
                 }}>
-                    <h3 style={{ 
-                        fontSize: '14px', 
-                        fontWeight: 'bold',
-                        marginTop: 0,
-                        marginBottom: '12px',
-                        color: token('color.text.subtle')
-                    }}>
-                        Node Palette
-                    </h3>
+                    <Heading size="xsmall">Node Palette</Heading>
                     
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <Stack space="space.100" xcss={xcss({ marginTop: token('space.150') })}>
                         <Button
                             appearance="default"
                             onClick={() => addNode('start')}
-                            style={{ justifyContent: 'flex-start' }}
                         >
                             🚀 Start
                         </Button>
@@ -420,7 +408,6 @@ function FlowBuilder({ flowId, onCancel }) {
                         <Button
                             appearance="default"
                             onClick={() => addNode('question')}
-                            style={{ justifyContent: 'flex-start' }}
                         >
                             ❓ Question
                         </Button>
@@ -428,7 +415,6 @@ function FlowBuilder({ flowId, onCancel }) {
                         <Button
                             appearance="default"
                             onClick={() => addNode('logic')}
-                            style={{ justifyContent: 'flex-start' }}
                         >
                             ⚡ Logic
                         </Button>
@@ -436,34 +422,37 @@ function FlowBuilder({ flowId, onCancel }) {
                         <Button
                             appearance="default"
                             onClick={() => addNode('action')}
-                            style={{ justifyContent: 'flex-start' }}
                         >
                             ⚙️ Action
                         </Button>
-                    </div>
+                    </Stack>
 
                     {/* Info section */}
-                    <div style={{
-                        marginTop: '24px',
-                        padding: '12px',
+                    <Box style={{
+                        marginTop: token('space.300'),
+                        padding: token('space.150'),
                         backgroundColor: token('color.background.information'),
-                        borderRadius: '4px',
-                        fontSize: '12px'
+                        borderRadius: token('border.radius')
                     }}>
-                        <p style={{ margin: 0, marginBottom: '8px', fontWeight: 'bold' }}>
+                        <Box style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: token('space.100') }}>
                             How to use:
-                        </p>
-                        <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                        </Box>
+                        <ul style={{ 
+                            margin: 0, 
+                            paddingLeft: token('space.200'), 
+                            fontSize: '12px',
+                            lineHeight: 1.5
+                        }}>
                             <li>Click a node type to add it to the canvas</li>
                             <li>Drag nodes to reposition them</li>
-                            <li>Drag from a node's edge to another node to connect them</li>
+                            <li>Drag from a node&apos;s edge to another node to connect them</li>
                             <li>Click Settings to configure flow metadata</li>
                         </ul>
-                    </div>
-                </div>
+                    </Box>
+                </Box>
 
                 {/* ReactFlow Canvas */}
-                <div style={{ flex: 1 }}>
+                <Box style={{ flex: 1 }}>
                     <ReactFlow
                         nodes={nodes}
                         edges={edges}
@@ -473,15 +462,15 @@ function FlowBuilder({ flowId, onCancel }) {
                         onNodeClick={onNodeClick}
                         colorMode={getGlobalTheme().colorMode}
                         fitView
-                        attributionPosition="bottom-left"
+                        attributionPosition="top-left"
                     >
                         <Controls />
                         <MiniMap />
                         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
                     </ReactFlow>
-                </div>
-            </div>
-        </div>
+                </Box>
+            </Box>
+        </Box>
     );
 }
 

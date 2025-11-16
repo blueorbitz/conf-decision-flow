@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import FlowList from './components/FlowList';
 import FlowBuilder from './components/FlowBuilder';
+import { Box } from '@atlaskit/primitives';
 
 /**
  * Main App Component
@@ -45,7 +46,7 @@ function App() {
      * Render the appropriate view based on currentView state
      */
     return (
-        <div>
+        <Box style={{ height: '100vh' }}>
             {currentView === 'list' && (
                 <FlowList 
                     onCreateFlow={handleCreateFlow}
@@ -59,7 +60,7 @@ function App() {
                     onCancel={handleBackToList}
                 />
             )}
-        </div>
+        </Box>
     );
 }
 
