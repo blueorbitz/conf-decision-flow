@@ -48,7 +48,9 @@ The front-end of you app is built on Atlassian's Atlaskit, which has some simila
 You MUST ONLY use components exported by Atlaskit usually begin with @atlaskit/*. Details can be obtained from https://atlaskit.atlassian.com/packages or the forge-knowledge MCP.
 React Flow reference and example can be option from https://reactflow.dev/examples.
 If your resolver no longer contains any definitions, you may delete it and remove it from the manifest.
-
+Use @atlaskit/heading for header text instead of <h?></h?>.
+Use @atlaskit/primitives (Box, Inline, Stack, Flex, Grid) to for container and layout.
+Use @atlaskit/css to style for atlaskit component.
 Note that THERE IS NOT UI KIT COMPONENT NAMED "Table" - always use "DynamicTable" instead! Using "Table" will cause the app not to render.
 
 # Storing Data

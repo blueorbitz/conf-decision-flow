@@ -5,6 +5,7 @@ modules:
       resolver:
         function: resolver
       title: Decision flow
+      layout: blank
   jira:issuePanel:
     - key: decision-flow-issue-panel
       resource: issue-panel

@@ -28,7 +28,7 @@
   - Integrate @forge/bridge invoke() calls for getFlows and deleteFlow
   - _Requirements: 1.1, 1.2, 1.6, 1.7_
 
-- [ ] 5. Implement admin page flow builder core
+- [x] 5. Implement admin page flow builder core
   - Create FlowBuilder.js component with ReactFlow canvas setup
   - Implement node palette sidebar with buttons for each node type (Start, Question, Logic, Action)
   - Implement node addition, dragging, and edge connection functionality

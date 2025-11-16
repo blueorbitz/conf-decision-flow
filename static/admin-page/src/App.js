@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import FlowList from './components/FlowList';
+import FlowBuilder from './components/FlowBuilder';
 
 /**
  * Main App Component
  * 
  * Manages the overall application state and navigation between different views:
  * - 'list': Display all flows in a table (FlowList component)
- * - 'builder': Visual flow builder for creating/editing flows (to be implemented in future tasks)
+ * - 'builder': Visual flow builder for creating/editing flows (FlowBuilder component)
  */
 function App() {
     // Current view state: 'list' or 'builder'
@@ -53,12 +54,10 @@ function App() {
             )}
             
             {currentView === 'builder' && (
-                <div style={{ padding: '20px', textAlign: 'center' }}>
-                    <h2>Flow Builder</h2>
-                    <p>Flow builder will be implemented in the next task.</p>
-                    <p>Selected Flow ID: {selectedFlowId || 'New Flow'}</p>
-                    <button onClick={handleBackToList}>Back to List</button>
-                </div>
+                <FlowBuilder
+                    flowId={selectedFlowId}
+                    onCancel={handleBackToList}
+                />
             )}
         </div>
     );
