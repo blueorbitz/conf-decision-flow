@@ -1,5 +1,5 @@
 {
-  "name": "jira-admin-page-custom-ui",
+  "name": "decision-flow",
   "version": "1.1.16",
   "main": "index.js",
   "license": "MIT",
@@ -9,6 +9,7 @@
     "eslint-plugin-react-hooks": "^4.6.0"
   },
   "dependencies": {
-    "@forge/resolver": "1.7.1"
+    "@forge/resolver": "1.7.1",
+    "@forge/api": "^4.0.0"
   }
 }

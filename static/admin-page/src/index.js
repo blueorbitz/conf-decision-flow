@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom';
 import App from './App';
 
 import '@atlaskit/css-reset';
+import { setGlobalTheme } from '@atlaskit/tokens';
+
+// Set AtlasKit theme
+setGlobalTheme({ colorMode: 'auto' });
 
 ReactDOM.render(
     <React.StrictMode>
