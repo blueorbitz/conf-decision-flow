@@ -6,7 +6,7 @@ modules:
         function: resolver
       title: Decision flow
       layout: blank
-  jira:issuePanel:
+  jira:issueActivity:
     - key: decision-flow-issue-panel
       resource: issue-panel
       resolver:
@@ -22,9 +22,9 @@ resources:
     tunnel:
       port: 3000
   - key: issue-panel
-    path: static/admin-page/build # to replace with static/issue-panel/build when directory is created
+    path: static/issue-panel/build
     tunnel:
-      port: 3000
+      port: 3001
 permissions:
   content:
     styles:
