@@ -36,7 +36,7 @@
   - Integrate @forge/bridge invoke() calls for getFlow and saveFlow
   - _Requirements: 1.2, 1.3, 1.4, 1.5, 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7_
 
-- [ ] 6. Implement custom node components for flow builder
+- [x] 6. Implement custom node components for flow builder
   - Create StartNode.js with green styling, rocket icon, and single source handle
   - Create QuestionNode.js with blue styling, question preview, and target/source handles
   - Create LogicNode.js with purple styling, condition display, and two source handles (true/false)

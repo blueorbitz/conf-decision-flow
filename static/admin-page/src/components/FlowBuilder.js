@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { invoke } from '@forge/bridge';
 import {
     ReactFlow,
@@ -16,6 +16,7 @@ import Spinner from '@atlaskit/spinner';
 import Heading from '@atlaskit/heading';
 import { Box, Flex, Stack, xcss } from '@atlaskit/primitives';
 import { getGlobalTheme, token } from '@atlaskit/tokens';
+import { StartNode, QuestionNode, LogicNode, ActionNode } from './nodes';
 
 /**
  * FlowBuilder Component
@@ -29,8 +30,18 @@ import { getGlobalTheme, token } from '@atlaskit/tokens';
  * - Node dragging and edge connection
  * - Settings, Save, and Cancel actions
  * - Integration with backend via @forge/bridge
+ * - Custom node components with Atlaskit design tokens
  */
 function FlowBuilder({ flowId, onCancel }) {
+    // Define custom node types for ReactFlow
+    // This maps node type strings to their corresponding React components
+    const nodeTypes = useMemo(() => ({
+        start: StartNode,
+        question: QuestionNode,
+        logic: LogicNode,
+        action: ActionNode
+    }), []);
+
     // ReactFlow state management for nodes and edges
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -89,24 +100,10 @@ function FlowBuilder({ flowId, onCancel }) {
     const addStartNode = useCallback(() => {
         const startNode = {
             id: 'start-1',
-            type: 'default',
+            type: 'start',
             position: { x: 250, y: 50 },
             data: { 
-                label: '🚀 Start',
-                nodeType: 'start'
-            },
-            style: {
-                backgroundColor: token('color.background.success'),
-                color: token('color.text.inverse'),
-                border: `2px solid ${token('color.border.success')}`,
-                borderRadius: '50%',
-                width: 80,
-                height: 80,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                fontWeight: 'bold'
+                label: 'Start'
             }
         };
         setNodes([startNode]);
@@ -160,24 +157,10 @@ function FlowBuilder({ flowId, onCancel }) {
             case 'start':
                 newNode = {
                     id,
-                    type: 'default',
+                    type: 'start',
                     position,
                     data: { 
-                        label: '🚀 Start',
-                        nodeType: 'start'
-                    },
-                    style: {
-                        backgroundColor: token('color.background.success'),
-                        color: token('color.text.inverse'),
-                        border: `2px solid ${token('color.border.success')}`,
-                        borderRadius: '50%',
-                        width: 80,
-                        height: 80,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '14px',
-                        fontWeight: 'bold'
+                        label: 'Start'
                     }
                 };
                 break;
@@ -185,22 +168,12 @@ function FlowBuilder({ flowId, onCancel }) {
             case 'question':
                 newNode = {
                     id,
-                    type: 'default',
+                    type: 'question',
                     position,
                     data: { 
-                        label: '❓ Question',
-                        nodeType: 'question',
                         question: 'Enter your question',
                         questionType: 'single',
                         options: []
-                    },
-                    style: {
-                        backgroundColor: token('color.background.information'),
-                        color: token('color.text'),
-                        border: `2px solid ${token('color.border.information')}`,
-                        borderRadius: '8px',
-                        padding: '12px',
-                        minWidth: 150
                     }
                 };
                 break;
@@ -208,22 +181,12 @@ function FlowBuilder({ flowId, onCancel }) {
             case 'logic':
                 newNode = {
                     id,
-                    type: 'default',
+                    type: 'logic',
                     position,
                     data: { 
-                        label: '⚡ Logic',
-                        nodeType: 'logic',
                         fieldKey: '',
                         operator: 'equals',
                         expectedValue: ''
-                    },
-                    style: {
-                        backgroundColor: token('color.background.discovery'),
-                        color: token('color.text'),
-                        border: `2px solid ${token('color.border.discovery')}`,
-                        borderRadius: '8px',
-                        padding: '12px',
-                        minWidth: 150
                     }
                 };
                 break;
@@ -231,22 +194,12 @@ function FlowBuilder({ flowId, onCancel }) {
             case 'action':
                 newNode = {
                     id,
-                    type: 'default',
+                    type: 'action',
                     position,
                     data: { 
-                        label: '⚙️ Action',
-                        nodeType: 'action',
                         actionType: 'setField',
                         fieldKey: '',
                         fieldValue: ''
-                    },
-                    style: {
-                        backgroundColor: token('color.background.warning'),
-                        color: token('color.text'),
-                        border: `2px solid ${token('color.border.warning')}`,
-                        borderRadius: '8px',
-                        padding: '12px',
-                        minWidth: 150
                     }
                 };
                 break;
@@ -460,6 +413,7 @@ function FlowBuilder({ flowId, onCancel }) {
                         onEdgesChange={onEdgesChange}
                         onConnect={onConnect}
                         onNodeClick={onNodeClick}
+                        nodeTypes={nodeTypes}
                         colorMode={getGlobalTheme().colorMode}
                         fitView
                         attributionPosition="top-left"
