@@ -14,9 +14,10 @@ import '@xyflow/react/dist/style.css';
 import Button from '@atlaskit/button/new';
 import Spinner from '@atlaskit/spinner';
 import Heading from '@atlaskit/heading';
-import { Box, Flex, Stack, xcss } from '@atlaskit/primitives';
+import { Box, Flex, Stack, Text, xcss } from '@atlaskit/primitives';
 import { getGlobalTheme, token } from '@atlaskit/tokens';
 import { StartNode, QuestionNode, LogicNode, ActionNode } from './nodes';
+import NodePropertiesPanel from './NodePropertiesPanel';
 
 /**
  * FlowBuilder Component
@@ -45,18 +46,19 @@ function FlowBuilder({ flowId, onCancel }) {
     // ReactFlow state management for nodes and edges
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-    
+
     // Flow metadata state
     const [flowMetadata, setFlowMetadata] = useState({
         name: '',
         description: '',
         projectKeys: []
     });
-    
+
     // UI state
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    
+    const [selectedNode, setSelectedNode] = useState(null);
+
     // Counter for generating unique node IDs
     const [nodeIdCounter, setNodeIdCounter] = useState(1);
 
@@ -75,7 +77,7 @@ function FlowBuilder({ flowId, onCancel }) {
                 });
                 setNodes(flow.nodes || []);
                 setEdges(flow.edges || []);
-                
+
                 // Update node ID counter to avoid conflicts
                 const maxId = Math.max(
                     0,
@@ -102,7 +104,7 @@ function FlowBuilder({ flowId, onCancel }) {
             id: 'start-1',
             type: 'start',
             position: { x: 250, y: 50 },
-            data: { 
+            data: {
                 label: 'Start'
             }
         };
@@ -133,9 +135,62 @@ function FlowBuilder({ flowId, onCancel }) {
     /**
      * Handle node selection
      */
-    const onNodeClick = useCallback((_event, _node) => {
-        // Node selection logic will be implemented in future tasks
+    const onNodeClick = useCallback((_event, node) => {
+        setSelectedNode(node);
     }, []);
+
+    /**
+     * Handle pane click (clicking on canvas background)
+     * Deselects the current node and closes the properties panel
+     */
+    const onPaneClick = useCallback(() => {
+        setSelectedNode(null);
+    }, []);
+
+    /**
+     * Update node data in real-time
+     * @param {string} nodeId - ID of the node to update
+     * @param {Object} newData - New data object for the node
+     */
+    const handleUpdateNode = useCallback((nodeId, newData) => {
+        setNodes((nds) =>
+            nds.map((node) => {
+                if (node.id === nodeId) {
+                    return {
+                        ...node,
+                        data: newData
+                    };
+                }
+                return node;
+            })
+        );
+
+        // Update selected node to reflect changes
+        setSelectedNode((prevSelected) => {
+            if (prevSelected && prevSelected.id === nodeId) {
+                return {
+                    ...prevSelected,
+                    data: newData
+                };
+            }
+            return prevSelected;
+        });
+    }, [setNodes]);
+
+    /**
+     * Delete a node and its connected edges
+     * @param {string} nodeId - ID of the node to delete
+     */
+    const handleDeleteNode = useCallback((nodeId) => {
+        // Remove the node
+        setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+
+        // Remove all edges connected to this node
+        setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+
+        // Clear selection
+        setSelectedNode(null);
+    }, [setNodes, setEdges]);
 
     /**
      * Add a new node to the canvas
@@ -159,7 +214,7 @@ function FlowBuilder({ flowId, onCancel }) {
                     id,
                     type: 'start',
                     position,
-                    data: { 
+                    data: {
                         label: 'Start'
                     }
                 };
@@ -170,7 +225,7 @@ function FlowBuilder({ flowId, onCancel }) {
                     id,
                     type: 'question',
                     position,
-                    data: { 
+                    data: {
                         question: 'Enter your question',
                         questionType: 'single',
                         options: []
@@ -183,7 +238,7 @@ function FlowBuilder({ flowId, onCancel }) {
                     id,
                     type: 'logic',
                     position,
-                    data: { 
+                    data: {
                         fieldKey: '',
                         operator: 'equals',
                         expectedValue: ''
@@ -196,7 +251,7 @@ function FlowBuilder({ flowId, onCancel }) {
                     id,
                     type: 'action',
                     position,
-                    data: { 
+                    data: {
                         actionType: 'setField',
                         fieldKey: '',
                         fieldValue: ''
@@ -260,13 +315,13 @@ function FlowBuilder({ flowId, onCancel }) {
         if (name !== null) {
             const description = prompt('Flow Description (optional):', flowMetadata.description);
             const projectKeysStr = prompt('Project Keys (comma-separated):', flowMetadata.projectKeys.join(', '));
-            
+
             if (projectKeysStr !== null) {
                 const projectKeys = projectKeysStr
                     .split(',')
                     .map(key => key.trim())
                     .filter(key => key.length > 0);
-                
+
                 setFlowMetadata({
                     name: name || '',
                     description: description || '',
@@ -296,16 +351,16 @@ function FlowBuilder({ flowId, onCancel }) {
      * Main render
      */
     return (
-         <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column', padding: token('space.200') }}>
+        <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column', padding: token('space.200') }}>
             {/* Top Toolbar */}
-            <Flex 
+            <Flex
                 xcss={xcss({
                     padding: token('space.150'),
                     backgroundColor: token('elevation.surface'),
                     borderBottom: `${token('border.width')} solid ${token('color.border')}`,
                 })}
-                justifyContent="space-between" 
-                alignItems="center" 
+                justifyContent="space-between"
+                alignItems="center"
                 gap="space.150"
             >
                 <Box>
@@ -313,7 +368,7 @@ function FlowBuilder({ flowId, onCancel }) {
                         {flowId ? `Edit Flow: ${flowMetadata.name || 'Untitled'}` : 'Create New Flow'}
                     </Heading>
                 </Box>
-                
+
                 <Flex gap="space.100">
                     <Button
                         appearance="subtle"
@@ -349,7 +404,7 @@ function FlowBuilder({ flowId, onCancel }) {
                     overflowY: 'auto'
                 }}>
                     <Heading size="xsmall">Node Palette</Heading>
-                    
+
                     <Stack space="space.100" xcss={xcss({ marginTop: token('space.150') })}>
                         <Button
                             appearance="default"
@@ -357,21 +412,21 @@ function FlowBuilder({ flowId, onCancel }) {
                         >
                             🚀 Start
                         </Button>
-                        
+
                         <Button
                             appearance="default"
                             onClick={() => addNode('question')}
                         >
                             ❓ Question
                         </Button>
-                        
+
                         <Button
                             appearance="default"
                             onClick={() => addNode('logic')}
                         >
                             ⚡ Logic
                         </Button>
-                        
+
                         <Button
                             appearance="default"
                             onClick={() => addNode('action')}
@@ -388,18 +443,18 @@ function FlowBuilder({ flowId, onCancel }) {
                         borderRadius: token('border.radius')
                     }}>
                         <Box style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: token('space.100') }}>
-                            How to use:
+                            <Text weight="bold">How to use:</Text>
                         </Box>
-                        <ul style={{ 
-                            margin: 0, 
-                            paddingLeft: token('space.200'), 
+                        <ul style={{
+                            margin: 0,
+                            paddingLeft: token('space.200'),
                             fontSize: '12px',
                             lineHeight: 1.5
                         }}>
-                            <li>Click a node type to add it to the canvas</li>
-                            <li>Drag nodes to reposition them</li>
-                            <li>Drag from a node&apos;s edge to another node to connect them</li>
-                            <li>Click Settings to configure flow metadata</li>
+                            <li><Text>Click a node type to add it to the canvas</Text></li>
+                            <li><Text>Drag nodes to reposition them</Text></li>
+                            <li><Text>Drag from a node&apos;s edge to another node to connect them</Text></li>
+                            <li><Text>Click Settings to configure flow metadata</Text></li>
                         </ul>
                     </Box>
                 </Box>
@@ -413,6 +468,7 @@ function FlowBuilder({ flowId, onCancel }) {
                         onEdgesChange={onEdgesChange}
                         onConnect={onConnect}
                         onNodeClick={onNodeClick}
+                        onPaneClick={onPaneClick}
                         nodeTypes={nodeTypes}
                         colorMode={getGlobalTheme().colorMode}
                         fitView
@@ -423,6 +479,15 @@ function FlowBuilder({ flowId, onCancel }) {
                         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
                     </ReactFlow>
                 </Box>
+
+                {/* Node Properties Panel */}
+                {selectedNode !== null &&
+                    <NodePropertiesPanel
+                        selectedNode={selectedNode}
+                        onUpdateNode={handleUpdateNode}
+                        onDeleteNode={handleDeleteNode}
+                        onClose={() => setSelectedNode(null)}
+                    />}
             </Box>
         </Box>
     );
