@@ -18,6 +18,7 @@ import { Box, Flex, Stack, Text, xcss } from '@atlaskit/primitives';
 import { getGlobalTheme, token } from '@atlaskit/tokens';
 import { StartNode, QuestionNode, LogicNode, ActionNode } from './nodes';
 import NodePropertiesPanel from './NodePropertiesPanel';
+import FlowSettings from './FlowSettings';
 
 /**
  * FlowBuilder Component
@@ -58,6 +59,7 @@ function FlowBuilder({ flowId, onCancel }) {
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [selectedNode, setSelectedNode] = useState(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     // Counter for generating unique node IDs
     const [nodeIdCounter, setNodeIdCounter] = useState(1);
@@ -307,28 +309,23 @@ function FlowBuilder({ flowId, onCancel }) {
 
     /**
      * Handle Settings button click
+     * Opens the FlowSettings modal
      */
     const handleSettings = () => {
-        // Settings modal will be implemented in a future task
-        // For now, use a simple prompt
-        const name = prompt('Flow Name:', flowMetadata.name);
-        if (name !== null) {
-            const description = prompt('Flow Description (optional):', flowMetadata.description);
-            const projectKeysStr = prompt('Project Keys (comma-separated):', flowMetadata.projectKeys.join(', '));
+        setIsSettingsOpen(true);
+    };
 
-            if (projectKeysStr !== null) {
-                const projectKeys = projectKeysStr
-                    .split(',')
-                    .map(key => key.trim())
-                    .filter(key => key.length > 0);
-
-                setFlowMetadata({
-                    name: name || '',
-                    description: description || '',
-                    projectKeys
-                });
-            }
-        }
+    /**
+     * Handle settings save
+     * Updates flow metadata with values from the modal
+     * @param {Object} settings - Settings object with name, description, and projectKeys
+     */
+    const handleSettingsSave = (settings) => {
+        setFlowMetadata({
+            name: settings.name,
+            description: settings.description,
+            projectKeys: settings.projectKeys
+        });
     };
 
     /**
@@ -489,6 +486,14 @@ function FlowBuilder({ flowId, onCancel }) {
                         onClose={() => setSelectedNode(null)}
                     />}
             </Box>
+
+            {/* Flow Settings Modal */}
+            <FlowSettings
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                onSave={handleSettingsSave}
+                initialValues={flowMetadata}
+            />
         </Box>
     );
 }

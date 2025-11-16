@@ -52,7 +52,7 @@
   - Use Atlaskit form components (Textfield, Textarea, Select) with validation
   - _Requirements: 2.4, 2.5, 2.6, 9.6_
 
-- [ ] 8. Implement flow settings modal
+- [x] 8. Implement flow settings modal
   - Create FlowSettings.js modal dialog component
   - Add form fields for flow name (required), description (optional), and project keys (comma-separated, required)
   - Implement form validation ensuring name is non-empty and at least one project key is provided
