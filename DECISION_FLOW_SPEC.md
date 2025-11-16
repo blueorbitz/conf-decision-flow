@@ -13,14 +13,18 @@ Build an Atlassian Forge app that allows Jira admins to create conditional decis
 ### Frontend - Admin Page (static/admin-page/)
 - **Location**: `/static/admin-page/`
 - **Purpose**: Visual flow builder for admins
-- **Technology**: React with React Flow (@xyflow/react) library, Atlaskit components
-- **Build**: Uses existing npm setup (no Vite)
+- **Technology**: React 16, React Flow (@xyflow/react v12), Atlaskit components
+- **Build**: react-scripts (Create React App)
+- **Entry**: `src/index.js` → `src/App.js` → `public/index.html`
+- **Bridge**: `@forge/bridge` v5.8.0 for invoke() calls
+- **Existing packages**: @atlaskit/css-reset, @forge/bridge, react ^16, react-dom ^16
 
 ### Frontend - Issue Panel (static/issue-panel/)
 - **Location**: `/static/issue-panel/`
 - **Purpose**: User-facing questionnaire interface
-- **Technology**: React with React Flow library, Atlaskit components
-- **Build**: Uses existing npm setup (no Vite)
+- **Technology**: React 16, React Flow (@xyflow/react v12), Atlaskit components
+- **Build**: react-scripts (Create React App) - same structure as admin-page
+- **Bridge**: `@forge/bridge` for invoke() and view.getContext()
 
 ## Core Features
 
@@ -247,15 +251,124 @@ Build an Atlassian Forge app that allows Jira admins to create conditional decis
 ## Technical Considerations
 
 ### React Flow Integration
-- Use React Flow v11+ from reactflow package
-- Custom node types with Atlaskit styling
-- Use Atlaskit design token to match color for dark/light theme
-- Edge labels for logic node branches (true/false)
-- MiniMap and Controls for navigation
+
+#### Package & Version
+```json
+{
+  "@xyflow/react": "^12.0.0"
+}
+```
+
+#### Basic Setup Pattern
+```javascript
+import { ReactFlow, Background, Controls, MiniMap } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+// Custom node types
+const nodeTypes = {
+  start: StartNode,
+  question: QuestionNode,
+  logic: LogicNode,
+  action: ActionNode
+};
+
+// In component
+<ReactFlow
+  nodes={nodes}
+  edges={edges}
+  onNodesChange={onNodesChange}
+  onEdgesChange={onEdgesChange}
+  onConnect={onConnect}
+  nodeTypes={nodeTypes}
+  fitView
+>
+  <Background />
+  <Controls />
+  <MiniMap />
+</ReactFlow>
+```
+
+#### Custom Node Structure
+```javascript
+import { Handle, Position } from '@xyflow/react';
+import { token } from '@atlaskit/tokens';
+
+function QuestionNode({ data }) {
+  const borderColor = token('color.background.accent.red.bolder')
+  return (
+    <div style={{ padding: 10, border: `1px solid ${borderColor}`, borderRadius: 5 }}>
+      <Handle type="target" position={Position.Top} />
+      <div>{data.label}</div>
+      <Handle type="source" position={Position.Bottom} />
+    </div>
+  );
+}
+```
+
+#### Key Features to Use
+- **Custom Nodes**: Create styled nodes with Atlaskit components
+- **Edge Labels**: Add labels for logic branches (true/false, option names)
+- **Node Handles**: Multiple handles for logic nodes (true/false outputs)
+- **Read-only Mode**: Disable interactions in issue panel diagram view
+- **Path Highlighting**: Style nodes/edges differently based on execution state
+- **MiniMap**: For navigation in large flows
+- **Controls**: Zoom, fit view controls
+- **Design Tokens**: Use Atlaskit design tokens for theming (light/dark mode)
 
 ### Atlaskit Components to Use
-- **Admin Page**: Button, TextField, TextArea, Select, Modal, Table, Lozenge, Spinner
-- **Issue Panel**: Button, RadioGroup, CheckboxGroup, DatePicker, Textfield, Tabs, DynamicTable, SectionMessage
+
+#### Required Atlaskit Packages
+```json
+{
+  "@atlaskit/button": "^23.0.0",
+  "@atlaskit/textfield": "^8.0.0",
+  "@atlaskit/textarea": "^8.0.0",
+  "@atlaskit/select": "^21.0.0",
+  "@atlaskit/modal-dialog": "^14.0.0",
+  "@atlaskit/dynamic-table": "^18.0.0",
+  "@atlaskit/lozenge": "^13.0.0",
+  "@atlaskit/spinner": "^19.0.0",
+  "@atlaskit/radio": "^8.0.0",
+  "@atlaskit/checkbox": "^17.0.0",
+  "@atlaskit/datetime-picker": "^17.0.0",
+  "@atlaskit/tabs": "^18.0.0",
+  "@atlaskit/section-message": "^8.0.0",
+  "@atlaskit/form": "^14.0.0",
+  "@atlaskit/icon": "^29.0.0",
+  "@atlaskit/css-reset": "^7.0.0",
+  "@atlaskit/tokens": "^8.0.0",
+  "@atlaskit/primitives": "^16.0.0"
+}
+```
+
+#### Component Usage by View
+
+**Admin Page - Flow List**
+- `@atlaskit/button` - Create, Edit, Delete buttons
+- `@atlaskit/dynamic-table` - Flow list display
+- `@atlaskit/lozenge` - Status badges
+- `@atlaskit/spinner` - Loading states
+
+**Admin Page - Flow Builder**
+- `@atlaskit/button` - Save, Cancel, Add Node buttons
+- `@atlaskit/textfield` - Node labels, field keys
+- `@atlaskit/textarea` - Descriptions, questions, comments
+- `@atlaskit/select` - Dropdowns for node types, operators, action types
+- `@atlaskit/modal-dialog` - Flow settings modal
+- `@atlaskit/form` - Form validation and structure
+
+**Issue Panel - Questionnaire**
+- `@atlaskit/radio` - Single choice questions
+- `@atlaskit/checkbox` - Multiple choice questions
+- `@atlaskit/datetime-picker` - Date questions
+- `@atlaskit/textfield` - Number questions
+- `@atlaskit/button` - Submit, Reset buttons
+- `@atlaskit/section-message` - Success/error messages
+
+**Issue Panel - Tabs & Debugger**
+- `@atlaskit/tabs` - Flow tabs with completion status
+- `@atlaskit/dynamic-table` - Audit log display
+- `@atlaskit/lozenge` - Status indicators
 
 ### Forge Bridge
 - Use `invoke()` to call backend resolvers
