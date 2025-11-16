@@ -84,7 +84,7 @@ function FlowSettings({ isOpen, onClose, onSave, initialValues = {} }) {
         if (isOpen) {
             setName(initialValues.name || '');
             setDescription(initialValues.description || '');
-            
+
             // Clear errors when opening
             setNameError('');
             setProjectKeysError('');
@@ -93,7 +93,7 @@ function FlowSettings({ isOpen, onClose, onSave, initialValues = {} }) {
             fetchProjects().then(options => {
                 // Convert initial project keys to selected options
                 if (Array.isArray(initialValues.projectKeys) && initialValues.projectKeys.length > 0) {
-                    const selected = options.filter(opt => 
+                    const selected = options.filter(opt =>
                         initialValues.projectKeys.includes(opt.value)
                     );
                     setSelectedProjects(selected);
@@ -276,6 +276,10 @@ function FlowSettings({ isOpen, onClose, onSave, initialValues = {} }) {
                                             placeholder="Search and select projects..."
                                             noOptionsMessage={() => 'No projects found'}
                                             className={projectKeysError ? 'select-error' : ''}
+                                            menuPortalTarget={document.body}
+                                            styles={{
+                                                menuPortal: (base) => ({ ...base, zIndex: 9999 })
+                                            }}
                                         />
                                         {projectKeysError && <ErrorMessage>{projectKeysError}</ErrorMessage>}
                                         {!projectKeysError && (
