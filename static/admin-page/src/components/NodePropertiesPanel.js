@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { requestJira } from '@forge/bridge';
 import Button, { IconButton } from '@atlaskit/button/new';
 import Textfield from '@atlaskit/textfield';
 import TextArea from '@atlaskit/textarea';
@@ -36,6 +37,41 @@ import CrossIcon from '@atlaskit/icon/core/cross';
 function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose }) {
     // Local state for form fields
     const [formData, setFormData] = useState({});
+    
+    // State for Jira fields (for Logic and Action nodes)
+    const [jiraFields, setJiraFields] = useState([]);
+    const [isLoadingFields, setIsLoadingFields] = useState(false);
+
+    /**
+     * Fetch Jira fields from the API
+     */
+    useEffect(() => {
+        const fetchJiraFields = async () => {
+            setIsLoadingFields(true);
+            try {
+                const response = await requestJira('/rest/api/3/field');
+                const fields = await response.json();
+                
+                // Transform fields into Select options format
+                const fieldOptions = fields.map(field => ({
+                    label: `${field.name} (${field.key || field.id})`,
+                    value: field.key || field.id,
+                    field: field
+                }));
+                
+                setJiraFields(fieldOptions);
+            } catch (error) {
+                console.error('Error fetching Jira fields:', error);
+                // Set empty array on error so the component still works
+                setJiraFields([]);
+            } finally {
+                setIsLoadingFields(false);
+            }
+        };
+
+        // Only fetch fields once when component mounts
+        fetchJiraFields();
+    }, []);
 
     /**
      * Initialize form data when selected node changes
@@ -227,18 +263,22 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                             }}>
                                 Jira Field Key *
                             </label>
-                            <Textfield
-                                id="field-key"
-                                value={formData.fieldKey || ''}
-                                onChange={(e) => handleFieldChange('fieldKey', e.target.value)}
-                                placeholder="e.g., status, priority, customfield_10001"
+                            <Select
+                                inputId="field-key"
+                                options={jiraFields}
+                                value={jiraFields.find(opt => opt.value === formData.fieldKey)}
+                                onChange={(option) => handleFieldChange('fieldKey', option ? option.value : '')}
+                                placeholder={isLoadingFields ? "Loading fields..." : "Select a Jira field"}
+                                isLoading={isLoadingFields}
+                                isSearchable={true}
+                                isClearable={true}
                             />
                             <div style={{
                                 fontSize: '11px',
                                 color: token('color.text.subtlest'),
                                 marginTop: token('space.050')
                             }}>
-                                Enter the Jira field key to evaluate
+                                Select the Jira field to evaluate
                             </div>
                         </Box>
 
@@ -334,11 +374,15 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                                     }}>
                                         Field Key *
                                     </label>
-                                    <Textfield
-                                        id="action-field-key"
-                                        value={formData.fieldKey || ''}
-                                        onChange={(e) => handleFieldChange('fieldKey', e.target.value)}
-                                        placeholder="e.g., priority, assignee"
+                                    <Select
+                                        inputId="action-field-key"
+                                        options={jiraFields}
+                                        value={jiraFields.find(opt => opt.value === formData.fieldKey)}
+                                        onChange={(option) => handleFieldChange('fieldKey', option ? option.value : '')}
+                                        placeholder={isLoadingFields ? "Loading fields..." : "Select a Jira field"}
+                                        isLoading={isLoadingFields}
+                                        isSearchable={true}
+                                        isClearable={true}
                                     />
                                     <div style={{
                                         fontSize: '11px',
