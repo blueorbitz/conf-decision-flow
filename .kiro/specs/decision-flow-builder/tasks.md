@@ -20,7 +20,7 @@
   - Create component directory structure (components/, components/nodes/, styles/)
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7_
 
-- [ ] 4. Implement admin page flow list view
+- [x] 4. Implement admin page flow list view
   - Create FlowList.js component with DynamicTable displaying all flows
   - Implement Create New Flow button that navigates to flow builder
   - Implement Edit and Delete actions for each flow row
