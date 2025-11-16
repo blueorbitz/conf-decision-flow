@@ -66,7 +66,7 @@
   - Install dependencies using npm install in static/issue-panel directory
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 10. Implement issue panel app and flow tabs
+- [x] 10. Implement issue panel app and flow tabs
   - Create App.js that retrieves issue context using view.getContext()
   - Implement flow loading using invoke('getFlowsForIssue') based on issue's project key
   - Create FlowTabs.js component displaying tabs for each applicable flow
