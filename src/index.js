@@ -334,109 +334,89 @@ resolver.define('submitAnswer', async (req) => {
             };
         }
 
-        // Store the answer
-        state.answers[nodeId] = answer;
-        state.path.push(nodeId);
-
-        // Find next node
-        let nextNodeId = findNextNode(nodeId, flow.edges);
-        let lastProcessedNodeId = nodeId; // Track the last node we processed
-        console.log(`Finding next node from ${nodeId}, found: ${nextNodeId}`);
-        console.log(`Available edges:`, flow.edges.filter(e => e.source === nodeId));
-
-        // Process next nodes (handle logic nodes automatically)
-        while (nextNodeId) {
-            const nextNode = flow.nodes.find(n => n.id === nextNodeId);
-
-            if (!nextNode) {
-                console.error(`Next node not found: ${nextNodeId}`);
-                break;
-            }
-
-            // If it's a logic node, evaluate it automatically
-            if (nextNode.type === 'logic') {
-                console.log(`Evaluating logic node: ${nextNodeId}`);
-                state.path.push(nextNodeId);
-                lastProcessedNodeId = nextNodeId; // Update last processed node
-
-                const result = await evaluateLogicNodeInternal(issueKey, nextNode, req.context);
-                const edgeLabel = result ? 'true' : 'false';
-                console.log(`Logic evaluation result: ${result}, looking for edge with label: ${edgeLabel}`);
-
-                nextNodeId = findNextNode(nextNodeId, flow.edges, edgeLabel);
-                console.log(`Next node after logic: ${nextNodeId}`);
-
-                if (!nextNodeId) {
-                    console.error(`No edge found from logic node ${nextNode.id} with label '${edgeLabel}'`);
-                    console.error(`Available edges from ${nextNode.id}:`, flow.edges.filter(e => e.source === nextNode.id));
-                }
-            }
-            // If it's an action node, execute it
-            else if (nextNode.type === 'action') {
-                console.log(`Executing action node: ${nextNodeId}`);
-                state.path.push(nextNodeId);
-                state.currentNodeId = nextNodeId;
-                lastProcessedNodeId = nextNodeId; // Update last processed node
-
-                // Execute the action
-                const actionResult = await executeAction(issueKey, nextNode, state.answers, req.context);
-
-                // Log the action
-                await logAuditInternal(issueKey, flowId, {
-                    nodeId: nextNodeId,
-                    action: nextNode.data,
-                    result: actionResult,
-                    timestamp: new Date().toISOString(),
-                    answers: state.answers
-                });
-
-                // Check if there are more connecting nodes after this action
-                const nextAfterAction = findNextNode(nextNodeId, flow.edges);
-                console.log(`Checking for next node after action ${nextNodeId}: ${nextAfterAction}`);
-
-                if (!nextAfterAction) {
-                    // No more nodes, mark as completed
-                    console.log('No more nodes after action, marking flow as completed');
-                    state.completed = true;
-                    break;
-                } else {
-                    // Continue to next node
-                    console.log(`Found next node after action: ${nextAfterAction}, continuing flow`);
-                    nextNodeId = nextAfterAction;
-                }
-            }
-            // If it's a question node or start node, stop here
-            else {
-                state.currentNodeId = nextNodeId;
-                break;
-            }
+        // Get the current node to determine its type
+        const currentNode = flow.nodes.find(n => n.id === nodeId);
+        if (!currentNode) {
+            return { error: 'Current node not found' };
         }
 
-        // If no next node was found, we might be at the end of the flow or edges are missing
-        if (!nextNodeId && !state.completed) {
-            console.error(`No next node found from ${lastProcessedNodeId}. Flow may be incomplete or edges are not properly connected.`);
-            console.error(`Total edges in flow: ${flow.edges.length}`);
-            console.error(`Edges from ${lastProcessedNodeId}:`, flow.edges.filter(e => e.source === lastProcessedNodeId));
+        // Store the answer (if applicable)
+        if (answer !== null && answer !== undefined) {
+            state.answers[nodeId] = answer;
+        }
+        state.path.push(nodeId);
 
-            // Determine the node type for a better error message
-            const stuckNode = flow.nodes.find(n => n.id === lastProcessedNodeId);
-            const nodeType = stuckNode ? stuckNode.type : 'unknown';
+        // Handle different node types
+        if (currentNode.type === 'logic') {
+            // Evaluate logic node and determine next path
+            console.log(`Evaluating logic node: ${nodeId}`);
+            const result = await evaluateLogicNodeInternal(issueKey, currentNode, req.context);
+            const edgeLabel = result ? 'true' : 'false';
+            console.log(`Logic evaluation result: ${result}, looking for edge with label: ${edgeLabel}`);
 
-            let errorMessage = `Unable to progress from ${nodeType} node "${lastProcessedNodeId}". `;
-            if (nodeType === 'logic') {
-                errorMessage += `Please ensure the logic node has both 'true' and 'false' output edges connected.`;
-            } else {
-                errorMessage += `Please check that this node has an outgoing edge.`;
+            const nextNodeId = findNextNode(nodeId, flow.edges, edgeLabel);
+            console.log(`Next node after logic: ${nextNodeId}`);
+
+            if (!nextNodeId) {
+                console.error(`No edge found from logic node ${nodeId} with label '${edgeLabel}'`);
+                return {
+                    error: `Logic node has no '${edgeLabel}' path configured. Please check the flow configuration.`,
+                    currentNodeId: nodeId,
+                    answers: state.answers,
+                    path: state.path,
+                    completed: false
+                };
             }
 
-            // Return an error to the frontend so the user knows something is wrong
-            return {
-                error: errorMessage,
-                currentNodeId: state.currentNodeId,
-                answers: state.answers,
-                path: state.path,
-                completed: false
-            };
+            // Update current node to the next node
+            state.currentNodeId = nextNodeId;
+        } 
+        else if (currentNode.type === 'action') {
+            // Execute action node
+            console.log(`Executing action node: ${nodeId}`);
+            
+            // Execute the action
+            const actionResult = await executeAction(issueKey, currentNode, state.answers, req.context);
+
+            // Log the action
+            await logAuditInternal(issueKey, flowId, {
+                nodeId: nodeId,
+                action: currentNode.data,
+                result: actionResult,
+                timestamp: new Date().toISOString(),
+                answers: state.answers
+            });
+
+            // Check if there are more connecting nodes after this action
+            const nextNodeId = findNextNode(nodeId, flow.edges);
+            console.log(`Checking for next node after action ${nodeId}: ${nextNodeId}`);
+
+            if (!nextNodeId) {
+                // No more nodes, mark as completed
+                console.log('No more nodes after action, marking flow as completed');
+                state.completed = true;
+            } else {
+                // Move to next node
+                state.currentNodeId = nextNodeId;
+            }
+        }
+        else {
+            // For question and start nodes, just move to the next node
+            const nextNodeId = findNextNode(nodeId, flow.edges);
+            console.log(`Finding next node from ${nodeId}, found: ${nextNodeId}`);
+
+            if (!nextNodeId) {
+                console.error(`No next node found from ${nodeId}`);
+                return {
+                    error: `No path configured from this node. Please check the flow configuration.`,
+                    currentNodeId: nodeId,
+                    answers: state.answers,
+                    path: state.path,
+                    completed: false
+                };
+            }
+
+            state.currentNodeId = nextNodeId;
         }
 
         // Save execution state

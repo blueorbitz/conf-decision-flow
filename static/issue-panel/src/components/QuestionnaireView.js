@@ -39,6 +39,47 @@ function QuestionnaireView({ issueKey, flow, onStateChange }) {
   }, [issueKey, flow.id]);
 
   /**
+   * Get a human-readable field name from a field key
+   * @param {string} fieldKey - The Jira field key
+   * @returns {string} Human-readable field name
+   */
+  const getFieldDisplayName = (fieldKey) => {
+    const fieldNames = {
+      'summary': 'Summary',
+      'description': 'Description',
+      'priority': 'Priority',
+      'status': 'Status',
+      'assignee': 'Assignee',
+      'reporter': 'Reporter',
+      'duedate': 'Due Date',
+      'labels': 'Labels',
+      'components': 'Components',
+      'fixVersions': 'Fix Versions',
+      'issueType': 'Issue Type',
+      'project': 'Project'
+    };
+    return fieldNames[fieldKey] || fieldKey;
+  };
+
+  /**
+   * Get a human-readable operator name
+   * @param {string} operator - The operator key
+   * @returns {string} Human-readable operator
+   */
+  const getOperatorDisplayName = (operator) => {
+    const operatorNames = {
+      'equals': 'equals',
+      'notEquals': 'does not equal',
+      'contains': 'contains',
+      'greaterThan': 'is greater than',
+      'lessThan': 'is less than',
+      'isEmpty': 'is empty',
+      'isNotEmpty': 'is not empty'
+    };
+    return operatorNames[operator] || operator;
+  };
+
+  /**
    * Load the current execution state for this issue and flow
    * Determines which node the user is currently on
    */
@@ -378,27 +419,130 @@ function QuestionnaireView({ issueKey, flow, onStateChange }) {
     );
   }
 
-  // Logic node - should be automatically evaluated by backend
-  // This state should be transient, but show a message if we land here
+  // Logic node - user must manually trigger evaluation
   if (currentNode.type === 'logic') {
+    const { fieldKey, operator, expectedValue } = currentNode.data;
+    const fieldName = getFieldDisplayName(fieldKey);
+    const operatorName = getOperatorDisplayName(operator);
+
     return (
       <Box padding="space.400">
-        <Stack alignInline="center" space="space.200">
-          <Spinner size="large" />
-          <span>Evaluating conditions...</span>
+        <Stack space="space.300">
+          <SectionMessage appearance="warning" title="Condition Check Required">
+            <p>
+              The flow will now check if the issue's <strong>{fieldName}</strong> field {operatorName}
+              {expectedValue && ` "${expectedValue}"`}.
+            </p>
+            <p>
+              <strong>Please ensure this field is set correctly on the issue before proceeding.</strong>
+            </p>
+          </SectionMessage>
+
+          {/* Error message if any */}
+          {error && (
+            <SectionMessage appearance="error">
+              <p>{error}</p>
+            </SectionMessage>
+          )}
+
+          {/* Action buttons */}
+          <Inline space="space.100">
+            <Button
+              appearance="primary"
+              onClick={handleSubmit}
+              isDisabled={submitting}
+            >
+              {submitting ? 'Evaluating...' : 'Evaluate Condition'}
+            </Button>
+
+            <Button
+              appearance="subtle"
+              onClick={handleReset}
+              isDisabled={submitting}
+            >
+              Reset Flow
+            </Button>
+          </Inline>
+
+          {/* Progress indicator */}
+          {executionState && executionState.path && (
+            <Box paddingBlockStart="space.200">
+              <SectionMessage appearance="information">
+                <p>Progress: {executionState.path.length} step(s) completed</p>
+              </SectionMessage>
+            </Box>
+          )}
         </Stack>
       </Box>
     );
   }
 
-  // Action node - should trigger completion
-  // This state should be transient, but show a message if we land here
+  // Action node - user must manually trigger action execution
   if (currentNode.type === 'action') {
+    const { actionType, fieldKey, fieldValue, label, comment } = currentNode.data;
+    
+    // Build action description
+    let actionDescription = '';
+    switch (actionType) {
+      case 'setField':
+        actionDescription = `Set field "${getFieldDisplayName(fieldKey)}" to "${fieldValue}"`;
+        break;
+      case 'addLabel':
+        actionDescription = `Add label "${label}" to the issue`;
+        break;
+      case 'addComment':
+        actionDescription = `Add comment: "${comment}"`;
+        break;
+      default:
+        actionDescription = `Execute ${actionType} action`;
+    }
+
     return (
       <Box padding="space.400">
-        <Stack alignInline="center" space="space.200">
-          <Spinner size="large" />
-          <span>Executing actions...</span>
+        <Stack space="space.300">
+          <SectionMessage appearance="information" title="Action Ready to Execute">
+            <p>
+              The following action will be performed on this issue:
+            </p>
+            <p>
+              <strong>{actionDescription}</strong>
+            </p>
+          </SectionMessage>
+
+          {/* Error message if any */}
+          {error && (
+            <SectionMessage appearance="error">
+              <p>{error}</p>
+            </SectionMessage>
+          )}
+
+          {/* Action buttons */}
+          <Inline space="space.100">
+            <Button
+              appearance="primary"
+              onClick={handleSubmit}
+              isDisabled={submitting}
+            >
+              {submitting ? 'Executing...' : 'Execute Action'}
+            </Button>
+
+            <Button
+              appearance="subtle"
+              onClick={handleReset}
+              isDisabled={submitting}
+            >
+              Reset Flow
+            </Button>
+          </Inline>
+
+          {/* Progress indicator */}
+          {executionState && executionState.path && (
+            <Box paddingBlockStart="space.200">
+              <SectionMessage appearance="information">
+                <p>Progress: {executionState.path.length} step(s) completed</p>
+              </SectionMessage>
+            </Box>
+          )}
         </Stack>
       </Box>
     );

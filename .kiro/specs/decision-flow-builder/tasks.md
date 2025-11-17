@@ -83,6 +83,14 @@
   - Display completion message using SectionMessage when flow reaches action node
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.10, 4.11_
 
+- [x] 11.1 Feedback to manual trigger logic and action from questionnaire view
+  - Adjust the logic in the "submitAnswer" resolver to do the following.
+  - On submitAnswer, only run the current nodeId. Do not continue for logic and action.
+  - These 2 action is trigger via "submitAnswer" resolver just like for the question type node.
+  - Update the QuestionnaireView.js to accomodate the change in backend.
+  - For logic type, warn the users that the field is set correctly.
+  - For action type, inform the user what's the next action it will be.
+
 - [ ] 12. Implement flow diagram view
   - Create FlowDiagramView.js component with read-only ReactFlow visualization
   - Implement path highlighting: green for completed nodes, blue for current node, gray for unvisited
