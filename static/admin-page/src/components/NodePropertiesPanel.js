@@ -98,15 +98,23 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
 
     /**
      * Handle options array changes for Question nodes
+     * Store the raw text value to allow multi-line editing
      */
     const handleOptionsChange = (value) => {
-        // Split by newline and filter empty lines
+        // Split by newline and filter empty lines for the options array
         const optionsArray = value
             .split('\n')
             .map(opt => opt.trim())
             .filter(opt => opt.length > 0);
         
-        handleFieldChange('options', optionsArray);
+        // Update both the raw text and the parsed array
+        const updatedData = {
+            ...formData,
+            optionsText: value,
+            options: optionsArray
+        };
+        setFormData(updatedData);
+        onUpdateNode(selectedNode.id, updatedData);
     };
 
     /**
@@ -232,7 +240,7 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                                 </label>
                                 <TextArea
                                     id="question-options"
-                                    value={(formData.options || []).join('\n')}
+                                    value={formData.optionsText !== undefined ? formData.optionsText : (formData.options || []).join('\n')}
                                     onChange={(e) => handleOptionsChange(e.target.value)}
                                     placeholder="Enter one option per line"
                                     resize="auto"
