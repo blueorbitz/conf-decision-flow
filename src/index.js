@@ -48,9 +48,9 @@ function findStartNode(nodes) {
  * @returns {string|null} Next node ID or null
  */
 function findNextNode(currentNodeId, edges, edgeLabel = null) {
-    const edge = edges.find(e => 
-        e.source === currentNodeId && 
-        (edgeLabel === null || e.label === edgeLabel)
+    const edge = edges.find(e =>
+        e.source === currentNodeId &&
+        (edgeLabel === null || e.label === edgeLabel || e.sourceHandle === edgeLabel)
     );
     return edge ? edge.target : null;
 }
@@ -77,8 +77,7 @@ function evaluateCondition(fieldValue, operator, expectedValue) {
         case 'isEmpty':
             return !fieldValue || fieldValue === '' || (Array.isArray(fieldValue) && fieldValue.length === 0);
         case 'isNotEmpty':
-            // Explicitly return boolean - use !! to convert to boolean
-            return !!(fieldValue && fieldValue !== '' && (!Array.isArray(fieldValue) || fieldValue.length > 0));
+            return !!(fieldValue && fieldValue !== '' && fieldValue !== null && (!Array.isArray(fieldValue) || fieldValue.length > 0));
         default:
             console.error(`Unknown operator: ${operator}`);
             return false;
@@ -96,11 +95,11 @@ function evaluateCondition(fieldValue, operator, expectedValue) {
 resolver.define('getFlows', async (req) => {
     try {
         console.log('getFlows called');
-        
+
         // Get the list of flow IDs
         const flowIds = await storage.get('decision-flows') || [];
         console.log(`Found ${flowIds.length} flow IDs`);
-        
+
         // Retrieve each flow
         const flows = [];
         for (const flowId of flowIds) {
@@ -109,7 +108,7 @@ resolver.define('getFlows', async (req) => {
                 flows.push(flow);
             }
         }
-        
+
         return flows;
     } catch (error) {
         console.error('Error in getFlows:', error);
@@ -125,11 +124,11 @@ resolver.define('getFlow', async (req) => {
     try {
         const { flowId } = req.payload;
         console.log(`getFlow called for flowId: ${flowId}`);
-        
+
         if (!flowId) {
             return { error: 'flowId is required' };
         }
-        
+
         const flow = await storage.get(`flow:${flowId}`);
         return flow || null;
     } catch (error) {
@@ -146,35 +145,35 @@ resolver.define('saveFlow', async (req) => {
     try {
         const { flow } = req.payload;
         console.log('saveFlow called');
-        
+
         // Validate required fields
         if (!flow.name || flow.name.trim() === '') {
             return { error: 'Flow name is required' };
         }
-        
+
         if (!flow.projectKeys || !Array.isArray(flow.projectKeys) || flow.projectKeys.length === 0) {
             return { error: 'At least one project key is required' };
         }
-        
+
         // Generate ID if new flow
         if (!flow.id) {
             flow.id = generateId();
             flow.createdAt = new Date().toISOString();
         }
-        
+
         // Update timestamp
         flow.updatedAt = new Date().toISOString();
-        
+
         // Save the flow
         await storage.set(`flow:${flow.id}`, flow);
-        
+
         // Update the flow list
         const flowIds = await storage.get('decision-flows') || [];
         if (!flowIds.includes(flow.id)) {
             flowIds.push(flow.id);
             await storage.set('decision-flows', flowIds);
         }
-        
+
         console.log(`Flow saved with ID: ${flow.id}`);
         return flow;
     } catch (error) {
@@ -191,19 +190,19 @@ resolver.define('deleteFlow', async (req) => {
     try {
         const { flowId } = req.payload;
         console.log(`deleteFlow called for flowId: ${flowId}`);
-        
+
         if (!flowId) {
             return { error: 'flowId is required' };
         }
-        
+
         // Delete the flow
         await storage.delete(`flow:${flowId}`);
-        
+
         // Remove from flow list
         const flowIds = await storage.get('decision-flows') || [];
         const updatedFlowIds = flowIds.filter(id => id !== flowId);
         await storage.set('decision-flows', updatedFlowIds);
-        
+
         console.log(`Flow deleted: ${flowId}`);
         return { success: true };
     } catch (error) {
@@ -224,19 +223,19 @@ resolver.define('getFlowsForIssue', async (req) => {
     try {
         const { issueKey } = req.payload;
         console.log(`getFlowsForIssue called for issueKey: ${issueKey}`);
-        
+
         if (!issueKey) {
             return { error: 'issueKey is required' };
         }
-        
+
         // Extract project key from issue key
         const projectKey = extractProjectKey(issueKey);
         console.log(`Extracted project key: ${projectKey}`);
-        
+
         // Get all flows
         const flowIds = await storage.get('decision-flows') || [];
         const applicableFlows = [];
-        
+
         // Filter flows by project binding
         for (const flowId of flowIds) {
             const flow = await storage.get(`flow:${flowId}`);
@@ -244,7 +243,7 @@ resolver.define('getFlowsForIssue', async (req) => {
                 applicableFlows.push(flow);
             }
         }
-        
+
         console.log(`Found ${applicableFlows.length} applicable flows`);
         return applicableFlows;
     } catch (error) {
@@ -262,26 +261,26 @@ resolver.define('getExecutionState', async (req) => {
     try {
         const { issueKey, flowId } = req.payload;
         console.log(`getExecutionState called for issueKey: ${issueKey}, flowId: ${flowId}`);
-        
+
         if (!issueKey || !flowId) {
             return { error: 'issueKey and flowId are required' };
         }
-        
+
         // Get execution state
         const state = await storage.get(`exec:${issueKey}:${flowId}`);
-        
+
         // If no state exists, create default state
         if (!state) {
             const flow = await storage.get(`flow:${flowId}`);
             if (!flow) {
                 return { error: 'Flow not found' };
             }
-            
+
             const startNode = findStartNode(flow.nodes);
             if (!startNode) {
                 return { error: 'Start node not found in flow' };
             }
-            
+
             return {
                 completed: false,
                 currentNodeId: startNode.id,
@@ -289,7 +288,7 @@ resolver.define('getExecutionState', async (req) => {
                 path: []
             };
         }
-        
+
         return state;
     } catch (error) {
         console.error('Error in getExecutionState:', error);
@@ -312,17 +311,17 @@ resolver.define('submitAnswer', async (req) => {
     try {
         const { issueKey, flowId, nodeId, answer } = req.payload;
         console.log(`submitAnswer called for issueKey: ${issueKey}, flowId: ${flowId}, nodeId: ${nodeId}`);
-        
+
         if (!issueKey || !flowId || !nodeId) {
             return { error: 'issueKey, flowId, and nodeId are required' };
         }
-        
+
         // Load flow
         const flow = await storage.get(`flow:${flowId}`);
         if (!flow) {
             return { error: 'Flow not found' };
         }
-        
+
         // Load or create execution state
         let state = await storage.get(`exec:${issueKey}:${flowId}`);
         if (!state) {
@@ -334,53 +333,54 @@ resolver.define('submitAnswer', async (req) => {
                 path: []
             };
         }
-        
+
         // Store the answer
         state.answers[nodeId] = answer;
         state.path.push(nodeId);
-        
+
         // Find next node
         let nextNodeId = findNextNode(nodeId, flow.edges);
         let lastProcessedNodeId = nodeId; // Track the last node we processed
         console.log(`Finding next node from ${nodeId}, found: ${nextNodeId}`);
         console.log(`Available edges:`, flow.edges.filter(e => e.source === nodeId));
-        
+
         // Process next nodes (handle logic nodes automatically)
         while (nextNodeId) {
             const nextNode = flow.nodes.find(n => n.id === nextNodeId);
-            
+
             if (!nextNode) {
                 console.error(`Next node not found: ${nextNodeId}`);
                 break;
             }
-            
+
             // If it's a logic node, evaluate it automatically
             if (nextNode.type === 'logic') {
                 console.log(`Evaluating logic node: ${nextNodeId}`);
                 state.path.push(nextNodeId);
                 lastProcessedNodeId = nextNodeId; // Update last processed node
-                
+
                 const result = await evaluateLogicNodeInternal(issueKey, nextNode, req.context);
                 const edgeLabel = result ? 'true' : 'false';
                 console.log(`Logic evaluation result: ${result}, looking for edge with label: ${edgeLabel}`);
-                
+
                 nextNodeId = findNextNode(nextNodeId, flow.edges, edgeLabel);
                 console.log(`Next node after logic: ${nextNodeId}`);
-                
+
                 if (!nextNodeId) {
                     console.error(`No edge found from logic node ${nextNode.id} with label '${edgeLabel}'`);
                     console.error(`Available edges from ${nextNode.id}:`, flow.edges.filter(e => e.source === nextNode.id));
                 }
             }
-            // If it's an action node, execute it and mark as complete
+            // If it's an action node, execute it
             else if (nextNode.type === 'action') {
                 console.log(`Executing action node: ${nextNodeId}`);
                 state.path.push(nextNodeId);
                 state.currentNodeId = nextNodeId;
-                
+                lastProcessedNodeId = nextNodeId; // Update last processed node
+
                 // Execute the action
                 const actionResult = await executeAction(issueKey, nextNode, state.answers, req.context);
-                
+
                 // Log the action
                 await logAuditInternal(issueKey, flowId, {
                     nodeId: nextNodeId,
@@ -389,10 +389,21 @@ resolver.define('submitAnswer', async (req) => {
                     timestamp: new Date().toISOString(),
                     answers: state.answers
                 });
-                
-                // Mark as completed
-                state.completed = true;
-                break;
+
+                // Check if there are more connecting nodes after this action
+                const nextAfterAction = findNextNode(nextNodeId, flow.edges);
+                console.log(`Checking for next node after action ${nextNodeId}: ${nextAfterAction}`);
+
+                if (!nextAfterAction) {
+                    // No more nodes, mark as completed
+                    console.log('No more nodes after action, marking flow as completed');
+                    state.completed = true;
+                    break;
+                } else {
+                    // Continue to next node
+                    console.log(`Found next node after action: ${nextAfterAction}, continuing flow`);
+                    nextNodeId = nextAfterAction;
+                }
             }
             // If it's a question node or start node, stop here
             else {
@@ -400,26 +411,26 @@ resolver.define('submitAnswer', async (req) => {
                 break;
             }
         }
-        
+
         // If no next node was found, we might be at the end of the flow or edges are missing
         if (!nextNodeId && !state.completed) {
             console.error(`No next node found from ${lastProcessedNodeId}. Flow may be incomplete or edges are not properly connected.`);
             console.error(`Total edges in flow: ${flow.edges.length}`);
             console.error(`Edges from ${lastProcessedNodeId}:`, flow.edges.filter(e => e.source === lastProcessedNodeId));
-            
+
             // Determine the node type for a better error message
             const stuckNode = flow.nodes.find(n => n.id === lastProcessedNodeId);
             const nodeType = stuckNode ? stuckNode.type : 'unknown';
-            
+
             let errorMessage = `Unable to progress from ${nodeType} node "${lastProcessedNodeId}". `;
             if (nodeType === 'logic') {
                 errorMessage += `Please ensure the logic node has both 'true' and 'false' output edges connected.`;
             } else {
                 errorMessage += `Please check that this node has an outgoing edge.`;
             }
-            
+
             // Return an error to the frontend so the user knows something is wrong
-            return { 
+            return {
                 error: errorMessage,
                 currentNodeId: state.currentNodeId,
                 answers: state.answers,
@@ -427,10 +438,10 @@ resolver.define('submitAnswer', async (req) => {
                 completed: false
             };
         }
-        
+
         // Save execution state
         await storage.set(`exec:${issueKey}:${flowId}`, state);
-        
+
         console.log(`Execution state updated, current node: ${state.currentNodeId}, completed: ${state.completed}`);
         return state;
     } catch (error) {
@@ -448,32 +459,32 @@ resolver.define('resetExecution', async (req) => {
     try {
         const { issueKey, flowId } = req.payload;
         console.log(`resetExecution called for issueKey: ${issueKey}, flowId: ${flowId}`);
-        
+
         if (!issueKey || !flowId) {
             return { error: 'issueKey and flowId are required' };
         }
-        
+
         // Delete execution state
         await storage.delete(`exec:${issueKey}:${flowId}`);
-        
+
         // Return default state
         const flow = await storage.get(`flow:${flowId}`);
         if (!flow) {
             return { error: 'Flow not found' };
         }
-        
+
         const startNode = findStartNode(flow.nodes);
         if (!startNode) {
             return { error: 'Start node not found in flow' };
         }
-        
+
         const resetState = {
             completed: false,
             currentNodeId: startNode.id,
             answers: {},
             path: []
         };
-        
+
         console.log('Execution state reset');
         return resetState;
     } catch (error) {
@@ -492,29 +503,29 @@ resolver.define('resetExecution', async (req) => {
 async function evaluateLogicNodeInternal(issueKey, logicNode, context) {
     try {
         const { fieldKey, operator, expectedValue } = logicNode.data;
-        
+
         // Fetch issue data from Jira API
         const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueKey}`, {
             headers: {
                 'Accept': 'application/json'
             }
         });
-        
+
         if (!response.ok) {
             console.error(`Failed to fetch issue: ${response.status}`);
             return false;
         }
-        
+
         const issue = await response.json();
-        
+
         // Extract field value
         const fieldValue = issue.fields[fieldKey];
         console.log(`Field ${fieldKey} value:`, fieldValue);
-        
+
         // Evaluate condition
         const result = evaluateCondition(fieldValue, operator, expectedValue);
         console.log(`Condition evaluation: ${fieldValue} ${operator} ${expectedValue} = ${result}`);
-        
+
         return result;
     } catch (error) {
         console.error('Error evaluating logic node:', error);
@@ -537,9 +548,9 @@ async function evaluateLogicNodeInternal(issueKey, logicNode, context) {
 async function executeAction(issueKey, actionNode, answers, context) {
     try {
         const { actionType, fieldKey, fieldValue, label, comment } = actionNode.data;
-        
+
         console.log(`Executing action: ${actionType}`);
-        
+
         switch (actionType) {
             case 'setField':
                 return await setIssueField(issueKey, fieldKey, fieldValue);
@@ -566,7 +577,7 @@ async function executeAction(issueKey, actionNode, answers, context) {
 async function setIssueField(issueKey, fieldKey, value) {
     try {
         console.log(`Setting field ${fieldKey} to ${value} on issue ${issueKey}`);
-        
+
         const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueKey}`, {
             method: 'PUT',
             headers: {
@@ -579,13 +590,13 @@ async function setIssueField(issueKey, fieldKey, value) {
                 }
             })
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`Failed to set field: ${response.status} - ${errorText}`);
             return { success: false, error: `API error: ${response.status}`, data: errorText };
         }
-        
+
         console.log('Field updated successfully');
         return { success: true, data: { fieldKey, value } };
     } catch (error) {
@@ -603,7 +614,7 @@ async function setIssueField(issueKey, fieldKey, value) {
 async function addIssueLabel(issueKey, label) {
     try {
         console.log(`Adding label ${label} to issue ${issueKey}`);
-        
+
         const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueKey}`, {
             method: 'PUT',
             headers: {
@@ -616,13 +627,13 @@ async function addIssueLabel(issueKey, label) {
                 }
             })
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`Failed to add label: ${response.status} - ${errorText}`);
             return { success: false, error: `API error: ${response.status}`, data: errorText };
         }
-        
+
         console.log('Label added successfully');
         return { success: true, data: { label } };
     } catch (error) {
@@ -640,7 +651,7 @@ async function addIssueLabel(issueKey, label) {
 async function addIssueComment(issueKey, commentText) {
     try {
         console.log(`Adding comment to issue ${issueKey}`);
-        
+
         // Format comment in Atlassian Document Format (ADF)
         const adfComment = {
             type: 'doc',
@@ -657,7 +668,7 @@ async function addIssueComment(issueKey, commentText) {
                 }
             ]
         };
-        
+
         const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueKey}/comment`, {
             method: 'POST',
             headers: {
@@ -668,13 +679,13 @@ async function addIssueComment(issueKey, commentText) {
                 body: adfComment
             })
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`Failed to add comment: ${response.status} - ${errorText}`);
             return { success: false, error: `API error: ${response.status}`, data: errorText };
         }
-        
+
         const result = await response.json();
         console.log('Comment added successfully');
         return { success: true, data: result };
@@ -697,14 +708,14 @@ resolver.define('getAuditLogs', async (req) => {
     try {
         const { issueKey, flowId } = req.payload;
         console.log(`getAuditLogs called for issueKey: ${issueKey}, flowId: ${flowId}`);
-        
+
         if (!issueKey || !flowId) {
             return { error: 'issueKey and flowId are required' };
         }
-        
+
         const logs = await storage.get(`audit:${issueKey}:${flowId}`) || [];
         console.log(`Found ${logs.length} audit log entries`);
-        
+
         return logs;
     } catch (error) {
         console.error('Error in getAuditLogs:', error);
@@ -722,9 +733,9 @@ async function logAuditInternal(issueKey, flowId, entry) {
     try {
         const key = `audit:${issueKey}:${flowId}`;
         const logs = await storage.get(key) || [];
-        
+
         logs.push(entry);
-        
+
         await storage.set(key, logs);
         console.log('Audit log entry added');
     } catch (error) {
