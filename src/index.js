@@ -77,7 +77,8 @@ function evaluateCondition(fieldValue, operator, expectedValue) {
         case 'isEmpty':
             return !fieldValue || fieldValue === '' || (Array.isArray(fieldValue) && fieldValue.length === 0);
         case 'isNotEmpty':
-            return fieldValue && fieldValue !== '' && (!Array.isArray(fieldValue) || fieldValue.length > 0);
+            // Explicitly return boolean - use !! to convert to boolean
+            return !!(fieldValue && fieldValue !== '' && (!Array.isArray(fieldValue) || fieldValue.length > 0));
         default:
             console.error(`Unknown operator: ${operator}`);
             return false;
@@ -340,6 +341,9 @@ resolver.define('submitAnswer', async (req) => {
         
         // Find next node
         let nextNodeId = findNextNode(nodeId, flow.edges);
+        let lastProcessedNodeId = nodeId; // Track the last node we processed
+        console.log(`Finding next node from ${nodeId}, found: ${nextNodeId}`);
+        console.log(`Available edges:`, flow.edges.filter(e => e.source === nodeId));
         
         // Process next nodes (handle logic nodes automatically)
         while (nextNodeId) {
@@ -354,11 +358,19 @@ resolver.define('submitAnswer', async (req) => {
             if (nextNode.type === 'logic') {
                 console.log(`Evaluating logic node: ${nextNodeId}`);
                 state.path.push(nextNodeId);
+                lastProcessedNodeId = nextNodeId; // Update last processed node
                 
                 const result = await evaluateLogicNodeInternal(issueKey, nextNode, req.context);
-                nextNodeId = findNextNode(nextNodeId, flow.edges, result ? 'true' : 'false');
+                const edgeLabel = result ? 'true' : 'false';
+                console.log(`Logic evaluation result: ${result}, looking for edge with label: ${edgeLabel}`);
                 
-                console.log(`Logic evaluation result: ${result}, next node: ${nextNodeId}`);
+                nextNodeId = findNextNode(nextNodeId, flow.edges, edgeLabel);
+                console.log(`Next node after logic: ${nextNodeId}`);
+                
+                if (!nextNodeId) {
+                    console.error(`No edge found from logic node ${nextNode.id} with label '${edgeLabel}'`);
+                    console.error(`Available edges from ${nextNode.id}:`, flow.edges.filter(e => e.source === nextNode.id));
+                }
             }
             // If it's an action node, execute it and mark as complete
             else if (nextNode.type === 'action') {
@@ -382,11 +394,38 @@ resolver.define('submitAnswer', async (req) => {
                 state.completed = true;
                 break;
             }
-            // If it's a question node, stop here
+            // If it's a question node or start node, stop here
             else {
                 state.currentNodeId = nextNodeId;
                 break;
             }
+        }
+        
+        // If no next node was found, we might be at the end of the flow or edges are missing
+        if (!nextNodeId && !state.completed) {
+            console.error(`No next node found from ${lastProcessedNodeId}. Flow may be incomplete or edges are not properly connected.`);
+            console.error(`Total edges in flow: ${flow.edges.length}`);
+            console.error(`Edges from ${lastProcessedNodeId}:`, flow.edges.filter(e => e.source === lastProcessedNodeId));
+            
+            // Determine the node type for a better error message
+            const stuckNode = flow.nodes.find(n => n.id === lastProcessedNodeId);
+            const nodeType = stuckNode ? stuckNode.type : 'unknown';
+            
+            let errorMessage = `Unable to progress from ${nodeType} node "${lastProcessedNodeId}". `;
+            if (nodeType === 'logic') {
+                errorMessage += `Please ensure the logic node has both 'true' and 'false' output edges connected.`;
+            } else {
+                errorMessage += `Please check that this node has an outgoing edge.`;
+            }
+            
+            // Return an error to the frontend so the user knows something is wrong
+            return { 
+                error: errorMessage,
+                currentNodeId: state.currentNodeId,
+                answers: state.answers,
+                path: state.path,
+                completed: false
+            };
         }
         
         // Save execution state

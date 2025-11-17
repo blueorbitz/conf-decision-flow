@@ -1,0 +1,460 @@
+/**
+ * QuestionnaireView Component
+ * 
+ * Displays the interactive questionnaire interface for completing a decision flow.
+ * This component:
+ * - Shows the current question based on execution state
+ * - Renders appropriate input controls based on question type (single choice, multiple choice, date, number)
+ * - Handles answer submission and flow progression
+ * - Automatically evaluates logic nodes during flow progression
+ * - Displays completion message when flow reaches an action node
+ * - Provides reset functionality to restart the flow
+ */
+
+import React, { useState, useEffect } from 'react';
+import { invoke } from '@forge/bridge';
+import { Box, Stack, Inline } from '@atlaskit/primitives';
+import Button from '@atlaskit/button/new';
+import Spinner from '@atlaskit/spinner';
+import SectionMessage from '@atlaskit/section-message';
+import Textfield from '@atlaskit/textfield';
+import { RadioGroup } from '@atlaskit/radio';
+import { Checkbox } from '@atlaskit/checkbox';
+import { DatePicker } from '@atlaskit/datetime-picker';
+import Heading from '@atlaskit/heading';
+
+function QuestionnaireView({ issueKey, flow, onStateChange }) {
+  // State management
+  const [executionState, setExecutionState] = useState(null);
+  const [currentNode, setCurrentNode] = useState(null);
+  const [answer, setAnswer] = useState(null);
+  const [multipleChoiceAnswers, setMultipleChoiceAnswers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Load execution state and current node
+  useEffect(() => {
+    loadExecutionState();
+  }, [issueKey, flow.id]);
+
+  /**
+   * Load the current execution state for this issue and flow
+   * Determines which node the user is currently on
+   */
+  const loadExecutionState = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get execution state from backend
+      const state = await invoke('getExecutionState', {
+        issueKey,
+        flowId: flow.id
+      });
+
+      console.log('exec state', state);
+      setExecutionState(state);
+
+      // Find the current node in the flow
+      if (state && state.currentNodeId) {
+        const node = flow.nodes.find(n => n.id === state.currentNodeId);
+        setCurrentNode(node);
+
+        // Initialize answer state based on node type
+        if (node && node.type === 'question') {
+          // Pre-fill answer if it exists in execution state
+          const existingAnswer = state.answers?.[node.id];
+          if (existingAnswer !== undefined) {
+            if (node.data.questionType === 'multiple') {
+              setMultipleChoiceAnswers(existingAnswer || []);
+            } else {
+              setAnswer(existingAnswer);
+            }
+          } else {
+            // Reset answer state for new question
+            setAnswer(null);
+            setMultipleChoiceAnswers([]);
+          }
+        }
+      }
+
+      setLoading(false);
+
+      // Notify parent component of state change
+      if (onStateChange) {
+        onStateChange(state);
+      }
+    } catch (err) {
+      console.error('Error loading execution state:', err);
+      setError(err.message || 'Failed to load questionnaire');
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Handle answer submission
+   * Submits the user's answer to the backend and progresses to the next node
+   */
+  const handleSubmit = async () => {
+    if (!currentNode) return;
+    console.log('submit node', currentNode);
+
+    // For question nodes, validate answer is provided
+    if (currentNode.type === 'question') {
+      const finalAnswer = currentNode.data.questionType === 'multiple' 
+        ? multipleChoiceAnswers 
+        : answer;
+
+      if (finalAnswer === null || finalAnswer === undefined || finalAnswer === '') {
+        setError('Please provide an answer before submitting');
+        return;
+      }
+
+      // For multiple choice, ensure at least one option is selected
+      if (currentNode.data.questionType === 'multiple' && multipleChoiceAnswers.length === 0) {
+        setError('Please select at least one option');
+        return;
+      }
+    }
+
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      // Determine the answer to submit
+      // For start nodes, answer is null
+      // For question nodes, use the user's answer
+      const finalAnswer = currentNode.type === 'question'
+        ? (currentNode.data.questionType === 'multiple' ? multipleChoiceAnswers : answer)
+        : null;
+
+      // Submit answer to backend and get updated state
+      console.log('Submitting answer:', {
+        issueKey,
+        flowId: flow.id,
+        nodeId: currentNode.id,
+        currentNodeType: currentNode.type,
+        answer: finalAnswer
+      });
+
+      const updatedState = await invoke('submitAnswer', {
+        issueKey,
+        flowId: flow.id,
+        nodeId: currentNode.id,
+        answer: finalAnswer
+      });
+
+      console.log('Received updated state:', updatedState);
+      console.log('Current node before update:', currentNode.id);
+      console.log('New current node from state:', updatedState?.currentNodeId);
+
+      // Check if backend returned an error
+      if (updatedState && updatedState.error) {
+        setError(updatedState.error);
+        setSubmitting(false);
+        return;
+      }
+
+      // Use the returned state directly instead of reloading
+      // This is more efficient and avoids timing issues
+      if (updatedState) {
+        setExecutionState(updatedState);
+
+        // Find the new current node
+        if (updatedState.currentNodeId) {
+          const newNode = flow.nodes.find(n => n.id === updatedState.currentNodeId);
+          setCurrentNode(newNode);
+
+          // Reset answer state for the new node
+          if (newNode && newNode.type === 'question') {
+            const existingAnswer = updatedState.answers?.[newNode.id];
+            if (existingAnswer !== undefined) {
+              if (newNode.data.questionType === 'multiple') {
+                setMultipleChoiceAnswers(existingAnswer || []);
+              } else {
+                setAnswer(existingAnswer);
+              }
+            } else {
+              setAnswer(null);
+              setMultipleChoiceAnswers([]);
+            }
+          }
+        }
+
+        // Notify parent component of state change
+        if (onStateChange) {
+          onStateChange(updatedState);
+        }
+      }
+
+      setSubmitting(false);
+    } catch (err) {
+      console.error('Error submitting answer:', err);
+      setError(err.message || 'Failed to submit answer');
+      setSubmitting(false);
+    }
+  };
+
+  /**
+   * Handle flow reset
+   * Clears execution state and returns to the start node
+   */
+  const handleReset = async () => {
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      // Reset execution state on backend
+      await invoke('resetExecution', {
+        issueKey,
+        flowId: flow.id
+      });
+
+      // Reload to get fresh state
+      await loadExecutionState();
+
+      setSubmitting(false);
+    } catch (err) {
+      console.error('Error resetting flow:', err);
+      setError(err.message || 'Failed to reset flow');
+      setSubmitting(false);
+    }
+  };
+
+  /**
+   * Render the appropriate input control based on question type
+   */
+  const renderQuestionInput = () => {
+    if (!currentNode || !currentNode.data) return null;
+
+    const { questionType, options } = currentNode.data;
+
+    switch (questionType) {
+      case 'single':
+        // Radio buttons for single choice
+        return (
+          <RadioGroup
+            options={options.map(opt => ({ name: 'answer', value: opt, label: opt }))}
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+          />
+        );
+
+      case 'multiple':
+        // Checkboxes for multiple choice
+        return (
+          <Stack space="space.100">
+            {options.map((option, index) => (
+              <Checkbox
+                key={index}
+                label={option}
+                isChecked={multipleChoiceAnswers.includes(option)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setMultipleChoiceAnswers([...multipleChoiceAnswers, option]);
+                  } else {
+                    setMultipleChoiceAnswers(multipleChoiceAnswers.filter(a => a !== option));
+                  }
+                }}
+              />
+            ))}
+          </Stack>
+        );
+
+      case 'date':
+        // Date picker for date input
+        return (
+          <DatePicker
+            value={answer || ''}
+            onChange={(value) => setAnswer(value)}
+            placeholder="Select a date"
+          />
+        );
+
+      case 'number':
+        // Number input field
+        return (
+          <Textfield
+            type="number"
+            value={answer || ''}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder="Enter a number"
+          />
+        );
+
+      default:
+        return <p>Unknown question type: {questionType}</p>;
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <Box padding="space.400">
+        <Stack alignInline="center" space="space.200">
+          <Spinner size="large" />
+          <span>Loading questionnaire...</span>
+        </Stack>
+      </Box>
+    );
+  }
+
+  // Error state
+  if (error && !currentNode) {
+    return (
+      <Box padding="space.400">
+        <SectionMessage appearance="error" title="Error">
+          <p>{error}</p>
+        </SectionMessage>
+      </Box>
+    );
+  }
+
+  // Completion state - flow has reached an action node
+  if (executionState && executionState.completed) {
+    return (
+      <Box padding="space.400">
+        <Stack space="space.300">
+          <SectionMessage appearance="success" title="Flow completed!">
+            <p>You have successfully completed this decision flow. The configured actions have been executed on this issue.</p>
+          </SectionMessage>
+
+          {/* Reset button to start over */}
+          <Box>
+            <Button
+              appearance="default"
+              onClick={handleReset}
+              isDisabled={submitting}
+            >
+              Start Over
+            </Button>
+          </Box>
+        </Stack>
+      </Box>
+    );
+  }
+
+  // No current node (shouldn't happen, but handle gracefully)
+  if (!currentNode) {
+    return (
+      <Box padding="space.400">
+        <SectionMessage appearance="warning" title="No question available">
+          <p>Unable to determine the current question. Please try resetting the flow.</p>
+          <Box paddingBlockStart="space.200">
+            <Button
+              appearance="default"
+              onClick={handleReset}
+              isDisabled={submitting}
+            >
+              Reset Flow
+            </Button>
+          </Box>
+        </SectionMessage>
+      </Box>
+    );
+  }
+
+  // Start node - show welcome message
+  if (currentNode.type === 'start') {
+    return (
+      <Box padding="space.400">
+        <Stack space="space.300">
+          <SectionMessage appearance="information" title="Ready to begin">
+            <p>Click the button below to start this decision flow.</p>
+          </SectionMessage>
+
+          <Box>
+            <Button
+              appearance="primary"
+              onClick={handleSubmit}
+              isDisabled={submitting}
+            >
+              {submitting ? 'Starting...' : 'Start Flow'}
+            </Button>
+          </Box>
+        </Stack>
+      </Box>
+    );
+  }
+
+  // Logic node - should be automatically evaluated by backend
+  // This state should be transient, but show a message if we land here
+  if (currentNode.type === 'logic') {
+    return (
+      <Box padding="space.400">
+        <Stack alignInline="center" space="space.200">
+          <Spinner size="large" />
+          <span>Evaluating conditions...</span>
+        </Stack>
+      </Box>
+    );
+  }
+
+  // Action node - should trigger completion
+  // This state should be transient, but show a message if we land here
+  if (currentNode.type === 'action') {
+    return (
+      <Box padding="space.400">
+        <Stack alignInline="center" space="space.200">
+          <Spinner size="large" />
+          <span>Executing actions...</span>
+        </Stack>
+      </Box>
+    );
+  }
+
+  // Question node - main questionnaire UI
+  return (
+    <Box padding="space.400">
+      <Stack space="space.300">
+        {/* Question text */}
+        <Box>
+          <Heading size="medium">{currentNode.data.question}</Heading>
+        </Box>
+
+        {/* Question input based on type */}
+        <Box>
+          {renderQuestionInput()}
+        </Box>
+
+        {/* Error message if any */}
+        {error && (
+          <SectionMessage appearance="error">
+            <p>{error}</p>
+          </SectionMessage>
+        )}
+
+        {/* Action buttons */}
+        <Inline space="space.100">
+          <Button
+            appearance="primary"
+            onClick={handleSubmit}
+            isDisabled={submitting}
+          >
+            {submitting ? 'Submitting...' : 'Submit Answer'}
+          </Button>
+
+          <Button
+            appearance="subtle"
+            onClick={handleReset}
+            isDisabled={submitting}
+          >
+            Reset Flow
+          </Button>
+        </Inline>
+
+        {/* Progress indicator */}
+        {executionState && executionState.path && (
+          <Box paddingBlockStart="space.200">
+            <SectionMessage appearance="information">
+              <p>Progress: {executionState.path.length} step(s) completed</p>
+            </SectionMessage>
+          </Box>
+        )}
+      </Stack>
+    </Box>
+  );
+}
+
+export default QuestionnaireView;

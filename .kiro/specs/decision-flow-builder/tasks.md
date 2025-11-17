@@ -74,7 +74,7 @@
   - Add view selector for Questionnaire, Flow Diagram, and Debugger sub-views
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 11. Implement questionnaire view
+- [x] 11. Implement questionnaire view
   - Create QuestionnaireView.js component that displays current question based on execution state
   - Implement conditional input rendering: RadioGroup for single choice, Checkboxes for multiple choice, DatePicker for date, Textfield for number
   - Add Submit button that calls invoke('submitAnswer') and progresses to next node

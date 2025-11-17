@@ -19,6 +19,7 @@ import Tabs, { Tab, TabList, TabPanel } from '@atlaskit/tabs';
 import Button from '@atlaskit/button/new';
 import Spinner from '@atlaskit/spinner';
 import { token } from '@atlaskit/tokens';
+import QuestionnaireView from './QuestionnaireView';
 
 function FlowTabs({ flows, issueKey, selectedFlowId, currentView, onFlowSelect, onViewChange }) {
   // Track completion status for each flow
@@ -156,7 +157,7 @@ function FlowTabs({ flows, issueKey, selectedFlowId, currentView, onFlowSelect, 
                   </Inline>
                 </Box>
 
-                {/* View content placeholder */}
+                {/* View content */}
                 <Box padding="space.100">
                   {loadingStatus ? (
                     <Stack alignInline="center" space="space.200">
@@ -164,25 +165,54 @@ function FlowTabs({ flows, issueKey, selectedFlowId, currentView, onFlowSelect, 
                       <span>Loading flow status...</span>
                     </Stack>
                   ) : (
-                    <Box
-                      padding="space.400"
-                      style={{
-                        border: `1px dashed ${token('color.border')}`,
-                        borderRadius: '3px',
-                        textAlign: 'center',
-                        color: token('color.background.neutral')
-                      }}
-                    >
-                      <Text color="color.text.accent.blue">
-                        {currentView === 'questionnaire' && 'Questionnaire view will be implemented in the next task'}
-                        {currentView === 'diagram' && 'Flow Diagram view will be implemented in a subsequent task'}
-                        {currentView === 'debugger' && 'Debugger view will be implemented in a subsequent task'}
-                      </Text>
-                      <div></div>
-                      <Text color="color.text.accent.teal" size="medium">
-                        Status: {completionStatus[flow.id] ? '✓ Completed' : '○ Incomplete'}
-                      </Text>
-                    </Box>
+                    <>
+                      {/* Questionnaire View */}
+                      {currentView === 'questionnaire' && (
+                        <QuestionnaireView
+                          issueKey={issueKey}
+                          flow={flow}
+                          onStateChange={(state) => {
+                            // Update completion status when state changes
+                            setCompletionStatus(prev => ({
+                              ...prev,
+                              [flow.id]: state?.completed || false
+                            }));
+                          }}
+                        />
+                      )}
+
+                      {/* Flow Diagram View - Placeholder */}
+                      {currentView === 'diagram' && (
+                        <Box
+                          padding="space.400"
+                          style={{
+                            border: `1px dashed ${token('color.border')}`,
+                            borderRadius: '3px',
+                            textAlign: 'center'
+                          }}
+                        >
+                          <Text color="color.text.accent.blue">
+                            Flow Diagram view will be implemented in a subsequent task
+                          </Text>
+                        </Box>
+                      )}
+
+                      {/* Debugger View - Placeholder */}
+                      {currentView === 'debugger' && (
+                        <Box
+                          padding="space.400"
+                          style={{
+                            border: `1px dashed ${token('color.border')}`,
+                            borderRadius: '3px',
+                            textAlign: 'center'
+                          }}
+                        >
+                          <Text color="color.text.accent.blue">
+                            Debugger view will be implemented in a subsequent task
+                          </Text>
+                        </Box>
+                      )}
+                    </>
                   )}
                 </Box>
               </Stack>
