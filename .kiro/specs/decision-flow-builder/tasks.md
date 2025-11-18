@@ -112,7 +112,7 @@
   - Enable zoom and pan controls while preventing node editing
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-- [ ] 13. Implement debugger view
+- [x] 13. Implement debugger view
   - Create DebuggerView.js component with DynamicTable displaying audit logs
   - Add columns for Timestamp, Node, Action Type, Result, and Answers
   - Implement Refresh button that reloads audit logs using invoke('getAuditLogs')

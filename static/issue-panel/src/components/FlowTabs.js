@@ -21,6 +21,7 @@ import Spinner from '@atlaskit/spinner';
 import { token } from '@atlaskit/tokens';
 import QuestionnaireView from './QuestionnaireView';
 import FlowDiagramView from './FlowDiagramView';
+import DebuggerView from './DebuggerView';
 
 function FlowTabs({ flows, issueKey, selectedFlowId, currentView, onFlowSelect, onViewChange }) {
   // Track completion status for each flow
@@ -190,20 +191,12 @@ function FlowTabs({ flows, issueKey, selectedFlowId, currentView, onFlowSelect, 
                         />
                       )}
 
-                      {/* Debugger View - Placeholder */}
+                      {/* Debugger View */}
                       {currentView === 'debugger' && (
-                        <Box
-                          padding="space.400"
-                          style={{
-                            border: `1px dashed ${token('color.border')}`,
-                            borderRadius: '3px',
-                            textAlign: 'center'
-                          }}
-                        >
-                          <Text color="color.text.accent.blue">
-                            Debugger view will be implemented in a subsequent task
-                          </Text>
-                        </Box>
+                        <DebuggerView
+                          issueKey={issueKey}
+                          flow={flow}
+                        />
                       )}
                     </>
                   )}
