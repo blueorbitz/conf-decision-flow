@@ -14,6 +14,7 @@ import '@xyflow/react/dist/style.css';
 import Button from '@atlaskit/button/new';
 import Spinner from '@atlaskit/spinner';
 import Heading from '@atlaskit/heading';
+import SectionMessage from '@atlaskit/section-message';
 import { Box, Flex, Stack, Text, xcss } from '@atlaskit/primitives';
 import { getGlobalTheme, token } from '@atlaskit/tokens';
 import { StartNode, QuestionNode, LogicNode, ActionNode } from './nodes';
@@ -60,6 +61,8 @@ function FlowBuilder({ flowId, onCancel }) {
     const [isSaving, setIsSaving] = useState(false);
     const [selectedNode, setSelectedNode] = useState(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [error, setError] = useState(null);
+    const [saveError, setSaveError] = useState(null);
 
     // Counter for generating unique node IDs
     const [nodeIdCounter, setNodeIdCounter] = useState(1);
@@ -72,8 +75,17 @@ function FlowBuilder({ flowId, onCancel }) {
      */
     const loadFlow = useCallback(async () => {
         setIsLoading(true);
+        setError(null);
         try {
             const flow = await invoke('getFlow', { flowId });
+            
+            // Check if backend returned an error
+            if (flow && flow.error) {
+                setError(flow.error);
+                setIsLoading(false);
+                return;
+            }
+            
             if (flow) {
                 setFlowMetadata({
                     name: flow.name || '',
@@ -95,7 +107,7 @@ function FlowBuilder({ flowId, onCancel }) {
             }
         } catch (err) {
             console.error('Error loading flow:', err);
-            alert('Failed to load flow. Please try again.');
+            setError(err.message || 'Failed to load flow. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -340,14 +352,17 @@ function FlowBuilder({ flowId, onCancel }) {
      * Save the flow to the backend
      */
     const handleSave = async () => {
+        // Clear previous save errors
+        setSaveError(null);
+        
         // Validate flow metadata
         if (!flowMetadata.name || flowMetadata.name.trim() === '') {
-            alert('Please provide a flow name in Settings before saving.');
+            setSaveError('Please provide a flow name in Settings before saving.');
             return;
         }
 
         if (!flowMetadata.projectKeys || flowMetadata.projectKeys.length === 0) {
-            alert('Please bind the flow to at least one project in Settings before saving.');
+            setSaveError('Please bind the flow to at least one project in Settings before saving.');
             return;
         }
 
@@ -364,12 +379,20 @@ function FlowBuilder({ flowId, onCancel }) {
                 updatedAt: new Date().toISOString()
             };
 
-            await invoke('saveFlow', { flow: flowData });
-            alert('Flow saved successfully!');
-            onCancel(); // Return to list view
+            const result = await invoke('saveFlow', { flow: flowData });
+            
+            // Check if backend returned an error
+            if (result && result.error) {
+                setSaveError(result.error);
+                setIsSaving(false);
+                return;
+            }
+            
+            // Success - return to list view
+            onCancel();
         } catch (err) {
             console.error('Error saving flow:', err);
-            alert('Failed to save flow. Please try again.');
+            setSaveError(err.message || 'Failed to save flow. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -407,7 +430,33 @@ function FlowBuilder({ flowId, onCancel }) {
                 alignItems: 'center',
                 minHeight: '600px'
             }}>
-                <Spinner size="large" />
+                <Stack space="space.200" alignInline="center">
+                    <Spinner size="large" />
+                    <Text>Loading flow...</Text>
+                </Stack>
+            </Box>
+        );
+    }
+
+    /**
+     * Render error state
+     */
+    if (error) {
+        return (
+            <Box style={{ padding: '20px' }}>
+                <Stack space="space.300">
+                    <SectionMessage appearance="error" title="Error loading flow">
+                        <p>{error}</p>
+                    </SectionMessage>
+                    <Flex gap="space.100">
+                        <Button appearance="primary" onClick={loadFlow}>
+                            Retry
+                        </Button>
+                        <Button appearance="subtle" onClick={onCancel}>
+                            Back to List
+                        </Button>
+                    </Flex>
+                </Stack>
             </Box>
         );
     }
@@ -418,45 +467,56 @@ function FlowBuilder({ flowId, onCancel }) {
     return (
         <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column', padding: token('space.200') }}>
             {/* Top Toolbar */}
-            <Flex
-                xcss={xcss({
-                    padding: token('space.150'),
-                    backgroundColor: token('elevation.surface'),
-                    borderBottom: `${token('border.width')} solid ${token('color.border')}`,
-                })}
-                justifyContent="space-between"
-                alignItems="center"
-                gap="space.150"
-            >
-                <Box>
-                    <Heading size="small">
-                        {flowId ? `Edit Flow: ${flowMetadata.name || 'Untitled'}` : 'Create New Flow'}
-                    </Heading>
-                </Box>
+            <Stack space="space.0">
+                <Flex
+                    xcss={xcss({
+                        padding: token('space.150'),
+                        backgroundColor: token('elevation.surface'),
+                        borderBottom: `${token('border.width')} solid ${token('color.border')}`,
+                    })}
+                    justifyContent="space-between"
+                    alignItems="center"
+                    gap="space.150"
+                >
+                    <Box>
+                        <Heading size="small">
+                            {flowId ? `Edit Flow: ${flowMetadata.name || 'Untitled'}` : 'Create New Flow'}
+                        </Heading>
+                    </Box>
 
-                <Flex gap="space.100">
-                    <Button
-                        appearance="subtle"
-                        onClick={handleSettings}
-                    >
-                        Settings
-                    </Button>
-                    <Button
-                        appearance="primary"
-                        onClick={handleSave}
-                        isDisabled={isSaving}
-                    >
-                        {isSaving ? 'Saving...' : 'Save'}
-                    </Button>
-                    <Button
-                        appearance="subtle"
-                        onClick={onCancel}
-                        isDisabled={isSaving}
-                    >
-                        Cancel
-                    </Button>
+                    <Flex gap="space.100">
+                        <Button
+                            appearance="subtle"
+                            onClick={handleSettings}
+                        >
+                            Settings
+                        </Button>
+                        <Button
+                            appearance="primary"
+                            onClick={handleSave}
+                            isDisabled={isSaving}
+                        >
+                            {isSaving ? 'Saving...' : 'Save'}
+                        </Button>
+                        <Button
+                            appearance="subtle"
+                            onClick={onCancel}
+                            isDisabled={isSaving}
+                        >
+                            Cancel
+                        </Button>
+                    </Flex>
                 </Flex>
-            </Flex>
+
+                {/* Save Error Message */}
+                {saveError && (
+                    <Box padding="space.150">
+                        <SectionMessage appearance="error" title="Save failed">
+                            <p>{saveError}</p>
+                        </SectionMessage>
+                    </Box>
+                )}
+            </Stack>
 
             {/* Main Content Area */}
             <Box style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

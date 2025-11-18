@@ -5,6 +5,7 @@ import Textfield from '@atlaskit/textfield';
 import TextArea from '@atlaskit/textarea';
 import Select from '@atlaskit/select';
 import Heading from '@atlaskit/heading';
+import SectionMessage from '@atlaskit/section-message';
 import { Box, Stack, Flex, Text } from '@atlaskit/primitives';
 import { token } from '@atlaskit/tokens';
 import CrossIcon from '@atlaskit/icon/core/cross';
@@ -41,6 +42,7 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
     // State for Jira fields (for Logic and Action nodes)
     const [jiraFields, setJiraFields] = useState([]);
     const [isLoadingFields, setIsLoadingFields] = useState(false);
+    const [fieldLoadError, setFieldLoadError] = useState(null);
 
     /**
      * Fetch Jira fields from the API
@@ -48,8 +50,15 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
     useEffect(() => {
         const fetchJiraFields = async () => {
             setIsLoadingFields(true);
+            setFieldLoadError(null);
             try {
                 const response = await requestJira('/rest/api/3/field');
+                
+                // Check if response is ok
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch fields: ${response.status} ${response.statusText}`);
+                }
+                
                 const fields = await response.json();
                 
                 // Transform fields into Select options format
@@ -62,6 +71,7 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                 setJiraFields(fieldOptions);
             } catch (error) {
                 console.error('Error fetching Jira fields:', error);
+                setFieldLoadError(error.message || 'Failed to load Jira fields');
                 // Set empty array on error so the component still works
                 setJiraFields([]);
             } finally {
@@ -72,6 +82,41 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
         // Only fetch fields once when component mounts
         fetchJiraFields();
     }, []);
+
+    /**
+     * Retry loading Jira fields
+     */
+    const retryLoadFields = () => {
+        setIsLoadingFields(true);
+        setFieldLoadError(null);
+        
+        const fetchJiraFields = async () => {
+            try {
+                const response = await requestJira('/rest/api/3/field');
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch fields: ${response.status} ${response.statusText}`);
+                }
+                
+                const fields = await response.json();
+                const fieldOptions = fields.map(field => ({
+                    label: `${field.name} (${field.key || field.id})`,
+                    value: field.key || field.id,
+                    field: field
+                }));
+                
+                setJiraFields(fieldOptions);
+            } catch (error) {
+                console.error('Error fetching Jira fields:', error);
+                setFieldLoadError(error.message || 'Failed to load Jira fields');
+                setJiraFields([]);
+            } finally {
+                setIsLoadingFields(false);
+            }
+        };
+        
+        fetchJiraFields();
+    };
 
     /**
      * Initialize form data when selected node changes
@@ -278,6 +323,15 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
 
                 return (
                     <Stack space="space.200">
+                        {/* Field Load Error Message */}
+                        {fieldLoadError && (
+                            <SectionMessage appearance="error" title="Error loading fields">
+                                <p>{fieldLoadError}</p>
+                                <Button appearance="link" onClick={retryLoadFields}>
+                                    Retry
+                                </Button>
+                            </SectionMessage>
+                        )}
                         {/* Field Key */}
                         <Box>
                             <label htmlFor="field-key" style={{
@@ -428,6 +482,16 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
             case 'action':
                 return (
                     <Stack space="space.200">
+                        {/* Field Load Error Message */}
+                        {fieldLoadError && (
+                            <SectionMessage appearance="error" title="Error loading fields">
+                                <p>{fieldLoadError}</p>
+                                <Button appearance="link" onClick={retryLoadFields}>
+                                    Retry
+                                </Button>
+                            </SectionMessage>
+                        )}
+
                         {/* Action Type */}
                         <Box>
                             <label htmlFor="action-type" style={{

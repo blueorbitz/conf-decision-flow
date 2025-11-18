@@ -13,6 +13,7 @@ import TextArea from '@atlaskit/textarea';
 import { ErrorMessage, Field, HelperMessage } from '@atlaskit/form';
 import { Stack } from '@atlaskit/primitives';
 import Select from '@atlaskit/select';
+import SectionMessage from '@atlaskit/section-message';
 
 /**
  * FlowSettings Component
@@ -41,6 +42,7 @@ function FlowSettings({ isOpen, onClose, onSave, initialValues = {} }) {
     // Project options state
     const [projectOptions, setProjectOptions] = useState([]);
     const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+    const [projectLoadError, setProjectLoadError] = useState(null);
 
     // Validation error state
     const [nameError, setNameError] = useState('');
@@ -51,11 +53,17 @@ function FlowSettings({ isOpen, onClose, onSave, initialValues = {} }) {
      */
     const fetchProjects = async (inputValue = '') => {
         setIsLoadingProjects(true);
+        setProjectLoadError(null);
         try {
             // Use requestJira from @forge/bridge to call the Jira REST API directly
             const response = await requestJira(
                 `/rest/api/3/project/search?maxResults=50${inputValue ? `&query=${encodeURIComponent(inputValue)}` : ''}`
             );
+
+            // Check if response is ok
+            if (!response.ok) {
+                throw new Error(`Failed to fetch projects: ${response.status} ${response.statusText}`);
+            }
 
             // Parse the JSON response
             const data = await response.json();
@@ -71,6 +79,7 @@ function FlowSettings({ isOpen, onClose, onSave, initialValues = {} }) {
             return options;
         } catch (err) {
             console.error('Error fetching projects:', err);
+            setProjectLoadError(err.message || 'Failed to load projects');
             return [];
         } finally {
             setIsLoadingProjects(false);
@@ -209,6 +218,16 @@ function FlowSettings({ isOpen, onClose, onSave, initialValues = {} }) {
 
                     <ModalBody>
                         <Stack space="space.200">
+                            {/* Project Load Error Message */}
+                            {projectLoadError && (
+                                <SectionMessage appearance="error" title="Error loading projects">
+                                    <p>{projectLoadError}</p>
+                                    <Button appearance="link" onClick={() => fetchProjects()}>
+                                        Retry
+                                    </Button>
+                                </SectionMessage>
+                            )}
+
                             {/* Flow Name Field */}
                             <Field
                                 name="name"
@@ -273,8 +292,15 @@ function FlowSettings({ isOpen, onClose, onSave, initialValues = {} }) {
                                             onChange={handleProjectsChange}
                                             onInputChange={handleProjectSearch}
                                             isLoading={isLoadingProjects}
-                                            placeholder="Search and select projects..."
-                                            noOptionsMessage={() => 'No projects found'}
+                                            isDisabled={isLoadingProjects || !!projectLoadError}
+                                            placeholder={
+                                                projectLoadError 
+                                                    ? "Error loading projects" 
+                                                    : isLoadingProjects 
+                                                        ? "Loading projects..." 
+                                                        : "Search and select projects..."
+                                            }
+                                            noOptionsMessage={() => projectLoadError ? 'Error loading projects' : 'No projects found'}
                                             className={projectKeysError ? 'select-error' : ''}
                                             menuPortalTarget={document.body}
                                             styles={{
@@ -282,7 +308,7 @@ function FlowSettings({ isOpen, onClose, onSave, initialValues = {} }) {
                                             }}
                                         />
                                         {projectKeysError && <ErrorMessage>{projectKeysError}</ErrorMessage>}
-                                        {!projectKeysError && (
+                                        {!projectKeysError && !projectLoadError && (
                                             <HelperMessage>
                                                 Select one or more Jira projects where this flow will be available
                                             </HelperMessage>

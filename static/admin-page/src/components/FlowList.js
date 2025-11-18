@@ -5,10 +5,11 @@ import Button, { IconButton } from '@atlaskit/button/new';
 import Spinner from '@atlaskit/spinner';
 import Lozenge from '@atlaskit/lozenge';
 import Heading from '@atlaskit/heading';
+import SectionMessage from '@atlaskit/section-message';
 import { token } from '@atlaskit/tokens';
 import EditIcon from '@atlaskit/icon/core/edit';
 import TrashIcon from '@atlaskit/icon/core/delete';
-import { Box, Text } from '@atlaskit/primitives';
+import { Box, Text, Stack } from '@atlaskit/primitives';
 
 /**
  * FlowList Component
@@ -59,12 +60,19 @@ function FlowList({ onCreateFlow, onEditFlow }) {
 
         try {
             // Call the deleteFlow resolver
-            await invoke('deleteFlow', { flowId });
+            const result = await invoke('deleteFlow', { flowId });
+            
+            // Check if backend returned an error
+            if (result && result.error) {
+                setError(`Failed to delete flow: ${result.error}`);
+                return;
+            }
+            
             // Reload the flows list after successful deletion
             await loadFlows();
         } catch (err) {
             console.error('Error deleting flow:', err);
-            alert('Failed to delete flow. Please try again.');
+            setError(err.message || 'Failed to delete flow. Please try again.');
         }
     };
 
@@ -166,13 +174,19 @@ function FlowList({ onCreateFlow, onEditFlow }) {
     /**
      * Render error state
      */
-    if (error) {
+    if (error && flows.length === 0) {
         return (
-            <Box style={{ padding: '20px', textAlign: 'center' }}>
-                <p style={{ color: 'red', marginBottom: '16px' }}>{error}</p>
-                <Button appearance="primary" onClick={loadFlows}>
-                    Retry
-                </Button>
+            <Box style={{ padding: '20px' }}>
+                <Stack space="space.300">
+                    <SectionMessage appearance="error" title="Error loading flows">
+                        <p>{error}</p>
+                    </SectionMessage>
+                    <Box>
+                        <Button appearance="primary" onClick={loadFlows}>
+                            Retry
+                        </Button>
+                    </Box>
+                </Stack>
             </Box>
         );
     }
@@ -197,6 +211,15 @@ function FlowList({ onCreateFlow, onEditFlow }) {
                     Create New Flow
                 </Button>
             </Box>
+
+            {/* Error message if any (but still show table if we have flows) */}
+            {error && flows.length > 0 && (
+                <Box style={{ marginBottom: '20px' }}>
+                    <SectionMessage appearance="warning">
+                        <p>{error}</p>
+                    </SectionMessage>
+                </Box>
+            )}
 
             {/* Empty state when no flows exist */}
             {flows.length === 0 ? (
