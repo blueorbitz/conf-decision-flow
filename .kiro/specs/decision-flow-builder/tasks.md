@@ -91,6 +91,14 @@
   - For logic type, warn the users that the field is set correctly.
   - For action type, inform the user what's the next action it will be.
 
+- [x] 11.2 Feedback for question node to accomodate multiple target output based on options
+  - Adjust the QuestionNode.js Handle to match the numbers of options available.
+  - Amend the findNextNode logic to accomodate the flow based on the selected option.
+
+- [ ] 11.3 Feedback for logic node to read answers from others node question.
+  - Adjust the LogicNode properties so that users is able to choose between key-in expected value or using the answer from QuestionNode above it.
+  - Amend the evaluateLogicNodeInternal in the resolver to accomodate QuestionsNode's answer for comparison.
+
 - [ ] 12. Implement flow diagram view
   - Create FlowDiagramView.js component with read-only ReactFlow visualization
   - Implement path highlighting: green for completed nodes, blue for current node, gray for unvisited

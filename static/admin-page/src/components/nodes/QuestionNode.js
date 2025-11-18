@@ -18,12 +18,14 @@ import { Text } from '@atlaskit/primitives';
  * 
  * Handles:
  * - One target handle at the top for incoming connections
- * - One source handle at the bottom for outgoing connections
+ * - For single choice questions: Multiple source handles (one per option) for branching paths
+ * - For other question types: One source handle at the bottom for outgoing connections
  * 
  * Features:
  * - Uses Atlaskit design tokens for consistent theming
  * - Supports both light and dark modes
  * - Displays question configuration in a readable format
+ * - Supports option-based branching for single choice questions
  * 
  * @param {Object} data - Node data containing question configuration
  * @param {string} data.question - The question text to display to users
@@ -44,6 +46,10 @@ function QuestionNode({ data, isConnectable }) {
         date: 'Date',
         number: 'Number'
     };
+
+    // For single choice questions with options, we'll create multiple source handles
+    // Each handle corresponds to one option for branching logic
+    const shouldShowMultipleHandles = questionType === 'single' && options.length > 0;
 
     return (
         <div
@@ -122,19 +128,51 @@ function QuestionNode({ data, isConnectable }) {
                 </div>
             )}
 
-            {/* Source handle at the bottom for outgoing connections */}
-            <Handle
-                type="source"
-                position={Position.Bottom}
-                id="source"
-                isConnectable={isConnectable}
-                style={{
-                    background: token('color.background.inverse.subtle'),
-                    border: `2px solid ${token('color.border.information')}`,
-                    width: '4px',
-                    height: '4px',
-                }}
-            />
+            {/* Source handles - multiple for single choice with options, single for others */}
+            {shouldShowMultipleHandles ? (
+                // Multiple handles for single choice questions - one per option
+                // These are positioned along the bottom edge, evenly distributed
+                options.map((option, index) => {
+                    const totalOptions = options.length;
+                    // Calculate position as percentage along the bottom edge
+                    // Add padding on sides to avoid edge overlap
+                    const leftPercent = ((index + 1) / (totalOptions + 1)) * 100;
+                    
+                    return (
+                        <Handle
+                            key={`option-${index}`}
+                            type="source"
+                            position={Position.Bottom}
+                            id={`option-${index}`}
+                            isConnectable={isConnectable}
+                            style={{
+                                background: token('color.background.inverse.subtle'),
+                                border: `2px solid ${token('color.border.information')}`,
+                                width: '4px',
+                                height: '4px',
+                                left: `${leftPercent}%`,
+                                top: '96%',
+                                transform: 'translateX(-50%)',
+                            }}
+                            title={option} // Tooltip showing which option this handle represents
+                        />
+                    );
+                })
+            ) : (
+                // Single handle for non-single-choice questions or questions without options
+                <Handle
+                    type="source"
+                    position={Position.Bottom}
+                    id="source"
+                    isConnectable={isConnectable}
+                    style={{
+                        background: token('color.background.inverse.subtle'),
+                        border: `2px solid ${token('color.border.information')}`,
+                        width: '4px',
+                        height: '4px',
+                    }}
+                />
+            )}
         </div>
     );
 }

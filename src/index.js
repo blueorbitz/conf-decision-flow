@@ -45,9 +45,39 @@ function findStartNode(nodes) {
  * @param {string} currentNodeId - Current node ID
  * @param {Array} edges - Array of flow edges
  * @param {string} edgeLabel - Optional edge label to filter by (e.g., 'true', 'false')
+ * @param {Object} currentNode - Optional current node object for option-based routing
+ * @param {any} answer - Optional answer value for option-based routing
  * @returns {string|null} Next node ID or null
  */
-function findNextNode(currentNodeId, edges, edgeLabel = null) {
+function findNextNode(currentNodeId, edges, edgeLabel = null, currentNode = null, answer = null) {
+    // For single choice question nodes with options, route based on the selected option
+    if (currentNode && currentNode.type === 'question' && 
+        currentNode.data.questionType === 'single' && 
+        currentNode.data.options && 
+        currentNode.data.options.length > 0 &&
+        answer !== null && answer !== undefined) {
+        
+        // Find the index of the selected option
+        const optionIndex = currentNode.data.options.indexOf(answer);
+        
+        if (optionIndex !== -1) {
+            // Look for an edge with sourceHandle matching the option index
+            const optionHandleId = `option-${optionIndex}`;
+            const edge = edges.find(e => 
+                e.source === currentNodeId && 
+                e.sourceHandle === optionHandleId
+            );
+            
+            if (edge) {
+                console.log(`Found option-based edge for option "${answer}" (index ${optionIndex})`);
+                return edge.target;
+            }
+            
+            console.log(`No edge found for option "${answer}" (handle: ${optionHandleId})`);
+        }
+    }
+    
+    // Default behavior: find edge by label or sourceHandle
     const edge = edges.find(e =>
         e.source === currentNodeId &&
         (edgeLabel === null || e.label === edgeLabel || e.sourceHandle === edgeLabel)
@@ -401,8 +431,9 @@ resolver.define('submitAnswer', async (req) => {
             }
         }
         else {
-            // For question and start nodes, just move to the next node
-            const nextNodeId = findNextNode(nodeId, flow.edges);
+            // For question and start nodes, move to the next node
+            // Pass the current node and answer for option-based routing
+            const nextNodeId = findNextNode(nodeId, flow.edges, null, currentNode, answer);
             console.log(`Finding next node from ${nodeId}, found: ${nextNodeId}`);
 
             if (!nextNodeId) {
