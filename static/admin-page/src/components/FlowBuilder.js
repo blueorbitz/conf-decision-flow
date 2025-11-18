@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { invoke } from '@forge/bridge';
 import {
     ReactFlow,
@@ -64,6 +64,9 @@ function FlowBuilder({ flowId, onCancel }) {
     // Counter for generating unique node IDs
     const [nodeIdCounter, setNodeIdCounter] = useState(1);
 
+    // Ref for tracking edge being dragged (for delete-on-drop functionality)
+    const edgeReconnectSuccessful = useRef(true);
+
     /**
      * Fetch flow data from backend
      */
@@ -127,7 +130,27 @@ function FlowBuilder({ flowId, onCancel }) {
     }, [flowId, loadFlow, addStartNode]);
 
     /**
+     * Validate edge connections
+     * Ensures that each source handle can only have one outgoing edge
+     * @param {Object} connection - The connection being validated
+     * @returns {boolean} - True if connection is valid, false otherwise
+     */
+    const isValidConnection = useCallback(
+        (connection) => {
+            // Check if the source handle already has an outgoing edge
+            const sourceHasEdge = edges.some(
+                (edge) => edge.source === connection.source && edge.sourceHandle === connection.sourceHandle
+            );
+
+            // Return false if source already has an edge (prevent multiple outgoing edges from same handle)
+            return !sourceHasEdge;
+        },
+        [edges]
+    );
+
+    /**
      * Handle edge connections between nodes
+     * Uses isValidConnection to ensure each source handle can only have one outgoing edge
      */
     const onConnect = useCallback(
         (params) => setEdges((eds) => addEdge(params, eds)),
@@ -148,6 +171,51 @@ function FlowBuilder({ flowId, onCancel }) {
     const onPaneClick = useCallback(() => {
         setSelectedNode(null);
     }, []);
+
+    /**
+     * Handle edge reconnect start
+     * Called when user starts dragging an edge to reconnect it
+     */
+    const onReconnectStart = useCallback(() => {
+        edgeReconnectSuccessful.current = false;
+    }, []);
+
+    /**
+     * Handle edge reconnect
+     * Called when user successfully reconnects an edge to a new target
+     * @param {Object} oldEdge - The original edge being reconnected
+     * @param {Object} newConnection - The new connection parameters
+     */
+    const onReconnect = useCallback(
+        (oldEdge, newConnection) => {
+            edgeReconnectSuccessful.current = true;
+            setEdges((els) => {
+                // Remove the old edge and add the new connection
+                const filteredEdges = els.filter((e) => e.id !== oldEdge.id);
+                return addEdge(newConnection, filteredEdges);
+            });
+        },
+        [setEdges]
+    );
+
+    /**
+     * Handle edge reconnect end
+     * Called when user finishes dragging an edge
+     * If the edge wasn't successfully reconnected, delete it
+     * @param {Event} _ - The event object (unused)
+     * @param {Object} edge - The edge that was being dragged
+     */
+    const onReconnectEnd = useCallback(
+        (_, edge) => {
+            if (!edgeReconnectSuccessful.current) {
+                // Edge was dropped without reconnecting - delete it
+                setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+            }
+
+            edgeReconnectSuccessful.current = true;
+        },
+        [setEdges]
+    );
 
     /**
      * Update node data in real-time
@@ -451,6 +519,8 @@ function FlowBuilder({ flowId, onCancel }) {
                             <li><Text>Click a node type to add it to the canvas</Text></li>
                             <li><Text>Drag nodes to reposition them</Text></li>
                             <li><Text>Drag from a node&apos;s edge to another node to connect them</Text></li>
+                            <li><Text>Drag an edge and drop it on empty space to delete it</Text></li>
+                            <li><Text>Each source handle can only have one outgoing edge</Text></li>
                             <li><Text>Click Settings to configure flow metadata</Text></li>
                         </ul>
                     </Box>
@@ -466,6 +536,10 @@ function FlowBuilder({ flowId, onCancel }) {
                         onConnect={onConnect}
                         onNodeClick={onNodeClick}
                         onPaneClick={onPaneClick}
+                        onReconnect={onReconnect}
+                        onReconnectStart={onReconnectStart}
+                        onReconnectEnd={onReconnectEnd}
+                        isValidConnection={isValidConnection}
                         nodeTypes={nodeTypes}
                         colorMode={getGlobalTheme().colorMode}
                         fitView
