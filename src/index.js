@@ -408,14 +408,18 @@ resolver.define('submitAnswer', async (req) => {
             // Execute the action
             const actionResult = await executeAction(issueKey, currentNode, state.answers, req.context);
 
-            // Log the action
+            // Log the action with actor information
             await logAuditInternal(issueKey, flowId, {
                 nodeId: nodeId,
                 action: currentNode.data,
                 result: actionResult,
                 timestamp: new Date().toISOString(),
-                answers: state.answers
-            });
+                answers: state.answers,
+                actor: {
+                    accountId: req.context.accountId,
+                    accountType: req.context.accountType
+                }
+            }, req.context);
 
             // Check if there are more connecting nodes after this action
             const nextNodeId = findNextNode(nodeId, flow.edges);
@@ -757,16 +761,44 @@ resolver.define('getAuditLogs', async (req) => {
  * @param {string} issueKey - The Jira issue key
  * @param {string} flowId - The flow ID
  * @param {Object} entry - The audit log entry
+ * @param {Object} context - The request context containing user information
  */
-async function logAuditInternal(issueKey, flowId, entry) {
+async function logAuditInternal(issueKey, flowId, entry, context) {
     try {
         const key = `audit:${issueKey}:${flowId}`;
         const logs = await storage.get(key) || [];
 
+        // Fetch user display name if actor information is available
+        if (entry.actor && entry.actor.accountId) {
+            try {
+                // Get user information from Jira API
+                const userResponse = await api.asUser().requestJira(
+                    route`/rest/api/3/user?accountId=${entry.actor.accountId}`,
+                    {
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    }
+                );
+
+                if (userResponse.ok) {
+                    const userData = await userResponse.json();
+                    entry.actor.displayName = userData.displayName || 'Unknown User';
+                    entry.actor.emailAddress = userData.emailAddress || null;
+                } else {
+                    console.warn('Failed to fetch user data:', userResponse.status);
+                    entry.actor.displayName = 'Unknown User';
+                }
+            } catch (userError) {
+                console.error('Error fetching user information:', userError);
+                entry.actor.displayName = 'Unknown User';
+            }
+        }
+
         logs.push(entry);
 
         await storage.set(key, logs);
-        console.log('Audit log entry added');
+        console.log('Audit log entry added with actor information');
     } catch (error) {
         console.error('Error logging audit entry:', error);
     }

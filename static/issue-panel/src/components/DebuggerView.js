@@ -208,6 +208,18 @@ function DebuggerView({ issueKey, flow }) {
   };
 
   /**
+   * Format actor information for display
+   * @param {Object} actor - The actor object
+   * @returns {string} Formatted actor name
+   */
+  const formatActor = (actor) => {
+    if (!actor) {
+      return 'Unknown';
+    }
+    return actor.displayName || actor.accountId || 'Unknown';
+  };
+
+  /**
    * Create table head configuration
    */
   const head = {
@@ -216,31 +228,37 @@ function DebuggerView({ issueKey, flow }) {
         key: 'timestamp',
         content: 'Timestamp',
         isSortable: true,
-        width: 20,
+        width: 18,
+      },
+      {
+        key: 'actor',
+        content: 'Actor',
+        isSortable: false,
+        width: 15,
       },
       {
         key: 'node',
         content: 'Node',
         isSortable: false,
-        width: 15,
+        width: 12,
       },
       {
         key: 'actionType',
         content: 'Action Type',
         isSortable: false,
-        width: 25,
+        width: 22,
       },
       {
         key: 'result',
         content: 'Result',
         isSortable: false,
-        width: 15,
+        width: 12,
       },
       {
         key: 'answers',
         content: 'Answers',
         isSortable: false,
-        width: 25,
+        width: 21,
       },
     ],
   };
@@ -258,6 +276,10 @@ function DebuggerView({ issueKey, flow }) {
         {
           key: 'timestamp',
           content: formatTimestamp(log.timestamp),
+        },
+        {
+          key: 'actor',
+          content: formatActor(log.actor),
         },
         {
           key: 'node',
