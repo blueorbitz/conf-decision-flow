@@ -1,45 +1,152 @@
-# Forge Hello World
+# Decision Flow Builder
 
-This project contains a Forge app written in Javascript that displays `Hello World!` in a Jira admin page. 
+A Forge app that allows Jira admins to create conditional decision flows that automatically trigger Jira actions based on user responses to questionnaires in the issue panel.
 
-See [developer.atlassian.com/platform/forge/](https://developer.atlassian.com/platform/forge) for documentation and tutorials explaining Forge.
+## Overview
+
+This app provides two main interfaces:
+
+1. **Admin Page**: Visual flow builder where admins create decision trees with questions, logic branches, and automated actions
+2. **Issue Panel**: User-facing questionnaire interface that guides users through flows and executes Jira actions based on their responses
+
+## Features
+
+- **Visual Flow Builder**: Drag-and-drop interface using React Flow for creating decision trees
+- **Multiple Node Types**:
+  - Start nodes (entry points)
+  - Question nodes (single/multiple choice, date, number inputs)
+  - Logic nodes (conditional branching based on Jira field values)
+  - Action nodes (set field, add label, add comment)
+- **Project Binding**: Bind flows to multiple Jira projects
+- **Interactive Questionnaires**: Users answer questions that traverse the decision tree
+- **Automated Actions**: Execute Jira operations when flows complete
+- **Audit Trail**: Complete logging of all actions and decisions
+- **Flow Visualization**: Read-only diagram view showing the current execution path
+
+## Architecture
+
+- **Backend** (`src/`): Node.js resolvers for flow management, execution, and storage
+- **Admin Page** (`static/admin-page/`): React app with React Flow and Atlaskit components
+- **Issue Panel** (`static/issue-panel/`): React app for user questionnaires and flow execution
 
 ## Requirements
 
-See [Set up Forge](https://developer.atlassian.com/platform/forge/set-up-forge/) for instructions to get set up.
+- Node.js 22.x
+- Forge CLI installed and configured
+- See [Set up Forge](https://developer.atlassian.com/platform/forge/set-up-forge/) for setup instructions
 
-## Quick start
-- Install top-level dependencies:
-```
+## Quick Start
+
+### 1. Install Dependencies
+
+Install root dependencies:
+```bash
 npm install
 ```
 
-- Install dependencies (inside of the `static/hello-world` directory):
-```
+Install admin page dependencies:
+```bash
+cd static/admin-page
 npm install
+cd ../..
 ```
 
-- Modify your app by editing the files in `static/hello-world/src/`.
-
-- Build your app (inside of the `static/hello-world` directory):
+Install issue panel dependencies:
+```bash
+cd static/issue-panel
+npm install
+cd ../..
 ```
+
+### 2. Build Frontend Apps
+
+Build the admin page:
+```bash
+cd static/admin-page
 npm run build
+cd ../..
 ```
 
-- Deploy your app by running:
-```
-forge deploy
-```
-
-- Install your app in an Atlassian site by running:
-```
-forge install
+Build the issue panel:
+```bash
+cd static/issue-panel
+npm run build
+cd ../..
 ```
 
-### Notes
-- Use the `forge deploy` command when you want to persist code changes.
-- Use the `forge install` command when you want to install the app on a new site.
-- Once the app is installed on a site, the site picks up the new app changes you deploy without needing to rerun the install command.
+### 3. Deploy and Install
+
+Deploy the app:
+```bash
+forge deploy --non-interactive --environment development
+```
+
+Install to your Jira site:
+```bash
+forge install --non-interactive --site <your-site-url> --product jira --environment development
+```
+
+### 4. Access the App
+
+- **Admin Page**: Navigate to Jira Settings → Apps → Decision Flow
+- **Issue Panel**: Open any Jira issue and look for the "Decision Flow" activity panel
+
+## Development
+
+### Using Forge Tunnel
+
+For faster development with hot reloading:
+
+```bash
+forge tunnel
+```
+
+This allows you to make changes to the frontend code without redeploying. You'll still need to redeploy if you change `manifest.yml` or backend code.
+
+### Project Structure
+
+```
+├── src/
+│   └── index.js              # Backend resolvers
+├── static/
+│   ├── admin-page/           # Admin flow builder UI
+│   │   ├── src/
+│   │   │   ├── App.js
+│   │   │   └── components/
+│   │   └── package.json
+│   └── issue-panel/          # User questionnaire UI
+│       ├── src/
+│       │   ├── App.js
+│       │   └── components/
+│       └── package.json
+├── docs/                     # Detailed specifications
+├── manifest.yml              # Forge app configuration
+└── package.json              # Root dependencies
+```
+
+### Key Technologies
+
+- **Forge Platform**: Atlassian's cloud app framework
+- **React 18**: Frontend framework
+- **React Flow (@xyflow/react)**: Visual flow builder
+- **Atlaskit**: Atlassian's design system components
+- **Forge Storage**: Key-value storage for flows and execution state
+
+## Documentation
+
+- `docs/DECISION_FLOW_SPEC.md`: Complete technical specification
+- `docs/IMPLEMENTATION_TASKS.md`: Development task breakdown
+- [Forge Documentation](https://developer.atlassian.com/platform/forge/)
+- [React Flow Documentation](https://reactflow.dev/)
+- [Atlaskit Components](https://atlaskit.atlassian.com/)
+
+## Permissions
+
+The app requires the following scopes:
+- `read:jira-work`: Read Jira issues and fields
+- `write:jira-work`: Update issues, add labels, add comments
+- `read:jira-user`: Access user information
+- `storage:app`: Store flow definitions and execution state
 
 ## Support
 
