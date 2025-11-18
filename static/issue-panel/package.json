@@ -9,6 +9,7 @@
     "@atlaskit/datetime-picker": "^14.0.0",
     "@atlaskit/dynamic-table": "^18.0.0",
     "@atlaskit/heading": "^5.2.12",
+    "@atlaskit/lozenge": "^13.0.0",
     "@atlaskit/primitives": "^16.1.1",
     "@atlaskit/radio": "^7.0.0",
     "@atlaskit/section-message": "^8.0.0",

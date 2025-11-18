@@ -104,7 +104,7 @@
   - Implement the deleting edge using DeleteEdgeDrop from this [example](https://reactflow.dev/examples/edges/delete-edge-on-drop).
   - Use isValidConnection to implement restriction to allow each source only can have 1 edge connected to it.
 
-- [ ] 12. Implement flow diagram view
+- [x] 12. Implement flow diagram view
   - Create FlowDiagramView.js component with read-only ReactFlow visualization
   - Implement path highlighting: green for completed nodes, blue for current node, gray for unvisited
   - Disable all editing interactions (nodesDraggable=false, nodesConnectable=false, elementsSelectable=false)
