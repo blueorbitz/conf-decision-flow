@@ -15,7 +15,7 @@
  * It loads the execution state to determine which nodes have been visited and which is current.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@forge/bridge';
 import { ReactFlow, Background, Controls, MiniMap } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';

@@ -14,7 +14,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@forge/bridge';
-import { Box, Stack, Inline, Text } from '@atlaskit/primitives';
+import { Box, Stack, Inline, Text, xcss } from '@atlaskit/primitives';
 import Tabs, { Tab, TabList, TabPanel } from '@atlaskit/tabs';
 import Button from '@atlaskit/button/new';
 import Spinner from '@atlaskit/spinner';
@@ -126,7 +126,7 @@ function FlowTabs({ flows, issueKey, selectedFlowId, currentView, onFlowSelect, 
         {flows.map((flow) => (
           <TabPanel key={flow.id}>
             {flow.id === selectedFlowId && (
-              <Stack space="space.050">
+              <Stack space="space.050" xcss={xcss({ width: '100%' })}>
                 {/* Flow description if available */}
                 {flow.description && (
                   <Box padding="space.100">
