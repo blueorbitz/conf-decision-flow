@@ -421,18 +421,47 @@ function QuestionnaireView({ issueKey, flow, onStateChange }) {
 
   // Logic node - user must manually trigger evaluation
   if (currentNode.type === 'logic') {
-    const { fieldKey, operator, expectedValue } = currentNode.data;
+    const { fieldKey, operator, expectedValue, valueSource, questionNodeId } = currentNode.data;
     const fieldName = getFieldDisplayName(fieldKey);
     const operatorName = getOperatorDisplayName(operator);
+
+    // Determine what value will be used for comparison
+    let comparisonDescription = '';
+    if (valueSource === 'question' && questionNodeId) {
+      // Find the question node to display its text
+      const questionNode = flow.nodes.find(n => n.id === questionNodeId);
+      const questionText = questionNode?.data?.question || 'a previous question';
+      const answerValue = executionState?.answers?.[questionNodeId];
+      
+      if (answerValue !== undefined && answerValue !== null) {
+        comparisonDescription = (
+          <>
+            The flow will check if the issue's <strong>{fieldName}</strong> field {operatorName} your answer to "{questionText}" 
+            (which was: <strong>{Array.isArray(answerValue) ? answerValue.join(', ') : answerValue}</strong>).
+          </>
+        );
+      } else {
+        comparisonDescription = (
+          <>
+            The flow will check if the issue's <strong>{fieldName}</strong> field {operatorName} your answer to "{questionText}".
+          </>
+        );
+      }
+    } else {
+      // Static value comparison
+      comparisonDescription = (
+        <>
+          The flow will check if the issue's <strong>{fieldName}</strong> field {operatorName}
+          {expectedValue && ` "${expectedValue}"`}.
+        </>
+      );
+    }
 
     return (
       <Box padding="space.400">
         <Stack space="space.300">
           <SectionMessage appearance="warning" title="Condition Check Required">
-            <p>
-              The flow will now check if the issue's <strong>{fieldName}</strong> field {operatorName}
-              {expectedValue && ` "${expectedValue}"`}.
-            </p>
+            <p>{comparisonDescription}</p>
             <p>
               <strong>Please ensure this field is set correctly on the issue before proceeding.</strong>
             </p>

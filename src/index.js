@@ -380,7 +380,7 @@ resolver.define('submitAnswer', async (req) => {
         if (currentNode.type === 'logic') {
             // Evaluate logic node and determine next path
             console.log(`Evaluating logic node: ${nodeId}`);
-            const result = await evaluateLogicNodeInternal(issueKey, currentNode, req.context);
+            const result = await evaluateLogicNodeInternal(issueKey, currentNode, req.context, flowId, state);
             const edgeLabel = result ? 'true' : 'false';
             console.log(`Logic evaluation result: ${result}, looking for edge with label: ${edgeLabel}`);
 
@@ -509,11 +509,13 @@ resolver.define('resetExecution', async (req) => {
  * @param {string} issueKey - The Jira issue key
  * @param {Object} logicNode - The logic node object
  * @param {Object} context - The request context
+ * @param {string} flowId - The flow ID (optional, needed for question answer lookup)
+ * @param {Object} executionState - The execution state (optional, needed for question answer lookup)
  * @returns {boolean} Evaluation result
  */
-async function evaluateLogicNodeInternal(issueKey, logicNode, context) {
+async function evaluateLogicNodeInternal(issueKey, logicNode, context, flowId = null, executionState = null) {
     try {
-        const { fieldKey, operator, expectedValue } = logicNode.data;
+        const { fieldKey, operator, expectedValue, valueSource, questionNodeId } = logicNode.data;
 
         // Fetch issue data from Jira API
         const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueKey}`, {
@@ -533,9 +535,25 @@ async function evaluateLogicNodeInternal(issueKey, logicNode, context) {
         const fieldValue = issue.fields[fieldKey];
         console.log(`Field ${fieldKey} value:`, fieldValue);
 
+        // Determine the comparison value
+        let comparisonValue = expectedValue;
+        
+        // If using question answer as the comparison value
+        if (valueSource === 'question' && questionNodeId && executionState) {
+            // Look up the answer from the execution state
+            const questionAnswer = executionState.answers[questionNodeId];
+            
+            if (questionAnswer !== undefined && questionAnswer !== null) {
+                comparisonValue = questionAnswer;
+                console.log(`Using answer from question node ${questionNodeId}: ${comparisonValue}`);
+            } else {
+                console.warn(`No answer found for question node ${questionNodeId}, using static value`);
+            }
+        }
+
         // Evaluate condition
-        const result = evaluateCondition(fieldValue, operator, expectedValue);
-        console.log(`Condition evaluation: ${fieldValue} ${operator} ${expectedValue} = ${result}`);
+        const result = evaluateCondition(fieldValue, operator, comparisonValue);
+        console.log(`Condition evaluation: ${fieldValue} ${operator} ${comparisonValue} = ${result}`);
 
         return result;
     } catch (error) {

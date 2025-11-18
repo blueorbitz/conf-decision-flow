@@ -259,6 +259,23 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                 );
 
             case 'logic':
+                // Get all question nodes that appear before this logic node in the flow
+                // This requires access to the flow structure, which we'll need to pass as a prop
+                const questionNodes = selectedNode.flowNodes 
+                    ? selectedNode.flowNodes.filter(n => n.type === 'question')
+                    : [];
+                
+                const questionNodeOptions = questionNodes.map(node => ({
+                    label: node.data.question || `Question ${node.id}`,
+                    value: node.id
+                }));
+
+                // Value source options
+                const valueSourceOptions = [
+                    { label: 'Static Value', value: 'static' },
+                    { label: 'Question Answer', value: 'question' }
+                ];
+
                 return (
                     <Stack space="space.200">
                         {/* Field Key */}
@@ -311,29 +328,89 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
 
                         {/* Expected Value (not needed for isEmpty/isNotEmpty) */}
                         {formData.operator !== 'isEmpty' && formData.operator !== 'isNotEmpty' && (
-                            <Box>
-                                <label htmlFor="expected-value" style={{
-                                    display: 'block',
-                                    marginBottom: token('space.050'),
-                                    fontWeight: 'bold',
-                                    fontSize: '12px'
-                                }}>
-                                    Expected Value *
-                                </label>
-                                <Textfield
-                                    id="expected-value"
-                                    value={formData.expectedValue || ''}
-                                    onChange={(e) => handleFieldChange('expectedValue', e.target.value)}
-                                    placeholder="Enter value to compare against"
-                                />
-                                <div style={{
-                                    fontSize: '11px',
-                                    color: token('color.text.subtlest'),
-                                    marginTop: token('space.050')
-                                }}>
-                                    The value to compare the field against
-                                </div>
-                            </Box>
+                            <>
+                                {/* Value Source Selection */}
+                                <Box>
+                                    <label htmlFor="value-source" style={{
+                                        display: 'block',
+                                        marginBottom: token('space.050'),
+                                        fontWeight: 'bold',
+                                        fontSize: '12px'
+                                    }}>
+                                        Value Source *
+                                    </label>
+                                    <Select
+                                        inputId="value-source"
+                                        options={valueSourceOptions}
+                                        value={valueSourceOptions.find(opt => opt.value === (formData.valueSource || 'static'))}
+                                        onChange={(option) => handleFieldChange('valueSource', option.value)}
+                                        placeholder="Select value source"
+                                    />
+                                    <div style={{
+                                        fontSize: '11px',
+                                        color: token('color.text.subtlest'),
+                                        marginTop: token('space.050')
+                                    }}>
+                                        Choose whether to use a static value or an answer from a previous question
+                                    </div>
+                                </Box>
+
+                                {/* Static Value Input */}
+                                {(!formData.valueSource || formData.valueSource === 'static') && (
+                                    <Box>
+                                        <label htmlFor="expected-value" style={{
+                                            display: 'block',
+                                            marginBottom: token('space.050'),
+                                            fontWeight: 'bold',
+                                            fontSize: '12px'
+                                        }}>
+                                            Expected Value *
+                                        </label>
+                                        <Textfield
+                                            id="expected-value"
+                                            value={formData.expectedValue || ''}
+                                            onChange={(e) => handleFieldChange('expectedValue', e.target.value)}
+                                            placeholder="Enter value to compare against"
+                                        />
+                                        <div style={{
+                                            fontSize: '11px',
+                                            color: token('color.text.subtlest'),
+                                            marginTop: token('space.050')
+                                        }}>
+                                            The value to compare the field against
+                                        </div>
+                                    </Box>
+                                )}
+
+                                {/* Question Node Selection */}
+                                {formData.valueSource === 'question' && (
+                                    <Box>
+                                        <label htmlFor="question-node-id" style={{
+                                            display: 'block',
+                                            marginBottom: token('space.050'),
+                                            fontWeight: 'bold',
+                                            fontSize: '12px'
+                                        }}>
+                                            Question Node *
+                                        </label>
+                                        <Select
+                                            inputId="question-node-id"
+                                            options={questionNodeOptions}
+                                            value={questionNodeOptions.find(opt => opt.value === formData.questionNodeId)}
+                                            onChange={(option) => handleFieldChange('questionNodeId', option ? option.value : '')}
+                                            placeholder="Select a question node"
+                                            isClearable={true}
+                                        />
+                                        <div style={{
+                                            fontSize: '11px',
+                                            color: token('color.text.subtlest'),
+                                            marginTop: token('space.050')
+                                        }}>
+                                            Select the question whose answer will be used for comparison
+                                        </div>
+                                    </Box>
+                                )}
+                            </>
                         )}
 
                         {/* Info box about edge labels */}

@@ -57,11 +57,21 @@ function LogicNode({ data, isConnectable }) {
         isNotEmpty: 'is not empty'
     };
 
+    // Extract value source configuration
+    const valueSource = data.valueSource || 'static';
+    const questionNodeId = data.questionNodeId;
+
     // Build condition summary text
     const conditionSummary = () => {
         if (operator === 'isEmpty' || operator === 'isNotEmpty') {
             return `${fieldKey} ${operatorLabels[operator]}`;
         }
+        
+        // If using question answer, show that instead of static value
+        if (valueSource === 'question' && questionNodeId) {
+            return `${fieldKey} ${operatorLabels[operator]} [Answer from Question]`;
+        }
+        
         return `${fieldKey} ${operatorLabels[operator]} ${expectedValue}`;
     };
 

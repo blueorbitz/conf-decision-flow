@@ -480,7 +480,7 @@ function FlowBuilder({ flowId, onCancel }) {
                 {/* Node Properties Panel */}
                 {selectedNode !== null &&
                     <NodePropertiesPanel
-                        selectedNode={selectedNode}
+                        selectedNode={{ ...selectedNode, flowNodes: nodes }}
                         onUpdateNode={handleUpdateNode}
                         onDeleteNode={handleDeleteNode}
                         onClose={() => setSelectedNode(null)}

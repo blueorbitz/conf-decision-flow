@@ -95,9 +95,14 @@
   - Adjust the QuestionNode.js Handle to match the numbers of options available.
   - Amend the findNextNode logic to accomodate the flow based on the selected option.
 
-- [ ] 11.3 Feedback for logic node to read answers from others node question.
+- [x] 11.3 Feedback for logic node to read answers from others node question.
   - Adjust the LogicNode properties so that users is able to choose between key-in expected value or using the answer from QuestionNode above it.
   - Amend the evaluateLogicNodeInternal in the resolver to accomodate QuestionsNode's answer for comparison.
+  - Update the questionnaire view to match the setting of static vs questions value.
+
+- [ ] 11.4 FlowBuilder edge enhancement
+  - Implement the deleting edge using DeleteEdgeDrop from this [example](https://reactflow.dev/examples/edges/delete-edge-on-drop).
+  - Use isValidConnection to implement restriction to allow each target only can have 1 edge connected to it.
 
 - [ ] 12. Implement flow diagram view
   - Create FlowDiagramView.js component with read-only ReactFlow visualization
