@@ -135,7 +135,7 @@
   - Add empty state messages for flows, audit logs, and questionnaires
   - _Requirements: All requirements_
 
-- [ ] 16. End-to-end validation testing
+- [x] 16. End-to-end validation testing
   - Create test flow in admin page with all node types (Start, Question, Logic, Action)
   - Bind flow to test project and save
   - Open issue in test project and verify flow appears in issue panel
