@@ -11,7 +11,7 @@ import { view, invoke } from '@forge/bridge';
 import { Box, Stack } from '@atlaskit/primitives';
 import Spinner from '@atlaskit/spinner';
 import SectionMessage from '@atlaskit/section-message';
-import FlowTabs from './components/FlowTabs';
+import FlowTabs from './components/FlowTabs.jsx';
 
 function App() {
   // State management for issue context, flows, and UI state

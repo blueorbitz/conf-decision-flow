@@ -12,7 +12,6 @@ modules:
       resolver:
         function: resolver
       title: Decision Flow
-      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
   function:
     - key: resolver
       handler: index.handler

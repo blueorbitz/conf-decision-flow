@@ -17,9 +17,9 @@ import Heading from '@atlaskit/heading';
 import SectionMessage from '@atlaskit/section-message';
 import { Box, Flex, Stack, Text, xcss } from '@atlaskit/primitives';
 import { getGlobalTheme, token } from '@atlaskit/tokens';
-import { StartNode, QuestionNode, LogicNode, ActionNode } from './nodes';
-import NodePropertiesPanel from './NodePropertiesPanel';
-import FlowSettings from './FlowSettings';
+import { StartNode, QuestionNode, LogicNode, ActionNode } from './nodes/index.jsx';
+import NodePropertiesPanel from './NodePropertiesPanel.jsx';
+import FlowSettings from './FlowSettings.jsx';
 
 /**
  * FlowBuilder Component

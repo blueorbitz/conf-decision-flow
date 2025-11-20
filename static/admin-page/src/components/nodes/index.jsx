@@ -26,7 +26,7 @@
  * <ReactFlow nodeTypes={nodeTypes} ... />
  */
 
-export { default as StartNode } from './StartNode';
-export { default as QuestionNode } from './QuestionNode';
-export { default as LogicNode } from './LogicNode';
-export { default as ActionNode } from './ActionNode';
+export { default as StartNode } from './StartNode.jsx';
+export { default as QuestionNode } from './QuestionNode.jsx';
+export { default as LogicNode } from './LogicNode.jsx';
+export { default as ActionNode } from './ActionNode.jsx';

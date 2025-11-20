@@ -146,3 +146,9 @@
   - Test flow diagram view to verify path highlighting
   - Test reset functionality to clear execution state
   - _Requirements: All requirements_
+
+- [x] 17. Convert React Scripts to Vite
+  - Change the start and build command from React Script to using Vite.
+  - Update the change for static/admin-page
+  - Update the change for static/issue-panel
+  - Update package.json

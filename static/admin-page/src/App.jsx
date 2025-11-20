@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import FlowList from './components/FlowList';
-import FlowBuilder from './components/FlowBuilder';
+import FlowList from './components/FlowList.jsx';
+import FlowBuilder from './components/FlowBuilder.jsx';
 import { Box } from '@atlaskit/primitives';
 
 /**

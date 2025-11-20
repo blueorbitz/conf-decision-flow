@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
+import App from './App.jsx';
 
 import '@atlaskit/css-reset';
 import { setGlobalTheme } from '@atlaskit/tokens';

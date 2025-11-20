@@ -19,9 +19,9 @@ import Tabs, { Tab, TabList, TabPanel } from '@atlaskit/tabs';
 import Button from '@atlaskit/button/new';
 import Spinner from '@atlaskit/spinner';
 import { token } from '@atlaskit/tokens';
-import QuestionnaireView from './QuestionnaireView';
-import FlowDiagramView from './FlowDiagramView';
-import DebuggerView from './DebuggerView';
+import QuestionnaireView from './QuestionnaireView.jsx';
+import FlowDiagramView from './FlowDiagramView.jsx';
+import DebuggerView from './DebuggerView.jsx';
 
 function FlowTabs({ flows, issueKey, selectedFlowId, currentView, onFlowSelect, onViewChange }) {
   // Track completion status for each flow

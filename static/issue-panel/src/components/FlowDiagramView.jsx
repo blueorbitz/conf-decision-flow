@@ -25,10 +25,10 @@ import SectionMessage from '@atlaskit/section-message';
 import { getGlobalTheme, token } from '@atlaskit/tokens';
 
 // Import custom node components (we'll create read-only versions)
-import StartNode from './nodes/StartNode';
-import QuestionNode from './nodes/QuestionNode';
-import LogicNode from './nodes/LogicNode';
-import ActionNode from './nodes/ActionNode';
+import StartNode from './nodes/StartNode.jsx';
+import QuestionNode from './nodes/QuestionNode.jsx';
+import LogicNode from './nodes/LogicNode.jsx';
+import ActionNode from './nodes/ActionNode.jsx';
 
 // Define node types for ReactFlow
 const nodeTypes = {
