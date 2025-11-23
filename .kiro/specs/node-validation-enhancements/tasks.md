@@ -1,11 +1,18 @@
 # Implementation Plan
 
-- [ ] 1. Create date expression utilities
+- [x] 1. Create date expression utilities
+
+
+
+
+
   - Create date expression parser and evaluator utilities that will be shared between frontend and backend
   - Implement support for relative dates, date functions, and combined expressions
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 1.8, 1.9_
 
-- [ ] 1.1 Implement date expression parser
+- [x] 1.1 Implement date expression parser
+
+
   - Write parser function to validate and parse date expressions
   - Support relative format: "{number}{unit}"
   - Support function format: "today()", "startofweek()", etc.
@@ -18,7 +25,9 @@
   - **Property 3: Combined date expression parsing**
   - **Validates: Requirements 1.1, 1.2, 1.3**
 
-- [ ] 1.3 Implement date expression evaluator
+- [x] 1.3 Implement date expression evaluator
+
+
   - Write evaluator function to convert expressions to absolute dates
   - Implement relative date calculation (add days/weeks/months/years)
   - Implement date functions (today, startofweek, endofweek, etc.)
@@ -31,6 +40,8 @@
   - **Property 6: Date expression evaluation with addition**
   - **Property 7: Date expression evaluation with subtraction**
   - **Validates: Requirements 1.4, 1.6, 1.7, 1.8, 1.9, 4.2-4.12**
+
+
 
 - [ ] 1.5 Implement date expression validator
   - Write validation function with detailed error messages
