@@ -147,17 +147,17 @@
   - **Property 15: Action node date expression acceptance**
   - **Validates: Requirements 4.1**
 
-- [ ] 7. Update node display components
+- [x] 7. Update node display components
   - Update LogicNode and ActionNode components to show date expression previews
   - Display both expression and evaluated date in node summary
   - _Requirements: 7.1, 7.3_
 
-- [ ] 7.1 Update LogicNode component
+- [x] 7.1 Update LogicNode component
   - Modify conditionSummary to detect date expressions
   - Show expression and preview: "duedate > today() + 7d (2024-01-15)"
   - _Requirements: 7.1_
 
-- [ ] 7.2 Update ActionNode component
+- [x] 7.2 Update ActionNode component
   - Modify actionSummary to detect date expressions
   - Show expression and preview: "Set duedate to startofweek() (2024-01-08)"
   - _Requirements: 7.3_

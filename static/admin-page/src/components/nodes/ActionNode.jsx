@@ -3,6 +3,8 @@ import { Handle, Position } from '@xyflow/react';
 import { token } from '@atlaskit/tokens';
 import Lozenge from '@atlaskit/lozenge';
 import { Text } from '@atlaskit/primitives';
+import { validateDateExpression } from '../utils/dateExpressionValidator.js';
+import { evaluateDateExpression } from '../utils/dateExpressionEvaluator.js';
 
 /**
  * ActionNode Component
@@ -54,13 +56,60 @@ function ActionNode({ data, isConnectable }) {
         addComment: 'Add Comment'
     };
 
+    /**
+     * Check if a value is a date expression
+     * @param {string} value - The value to check
+     * @returns {boolean} True if the value is a valid date expression
+     */
+    const isDateExpression = (value) => {
+        if (typeof value !== 'string' || !value) {
+            return false;
+        }
+        const validation = validateDateExpression(value);
+        return validation.valid;
+    };
+
+    /**
+     * Format a date for display
+     * @param {Date} date - The date to format
+     * @returns {string} Formatted date string (YYYY-MM-DD)
+     */
+    const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    /**
+     * Get the display value with date expression preview if applicable
+     * @param {any} value - The value to display
+     * @returns {string} The formatted display value
+     */
+    const getDisplayValue = (value) => {
+        // Check if it's a date expression
+        if (isDateExpression(value)) {
+            try {
+                const evaluatedDate = evaluateDateExpression(value);
+                return `${value} (${formatDate(evaluatedDate)})`;
+            } catch (error) {
+                // If evaluation fails, just show the expression
+                return value;
+            }
+        }
+        return value;
+    };
+
     // Build action summary text based on action type
     const actionSummary = () => {
         switch (actionType) {
             case 'setField':
-                return fieldKey && fieldValue 
-                    ? `Set ${fieldKey} to "${fieldValue}"`
-                    : 'Configure field update';
+                if (fieldKey && fieldValue) {
+                    // Use the display value which includes date expression preview
+                    const displayValue = getDisplayValue(fieldValue);
+                    return `Set ${fieldKey} to ${displayValue}`;
+                }
+                return 'Configure field update';
             case 'addLabel':
                 return label 
                     ? `Add label "${label}"`

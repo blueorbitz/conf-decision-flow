@@ -2,6 +2,8 @@ import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { token } from '@atlaskit/tokens';
 import { Text } from '@atlaskit/primitives';
+import { validateDateExpression } from '../utils/dateExpressionValidator.js';
+import { evaluateDateExpression } from '../utils/dateExpressionEvaluator.js';
 
 /**
  * LogicNode Component
@@ -61,6 +63,50 @@ function LogicNode({ data, isConnectable }) {
     const valueSource = data.valueSource || 'static';
     const questionNodeId = data.questionNodeId;
 
+    /**
+     * Check if a value is a date expression
+     * @param {string} value - The value to check
+     * @returns {boolean} True if the value is a valid date expression
+     */
+    const isDateExpression = (value) => {
+        if (typeof value !== 'string' || !value) {
+            return false;
+        }
+        const validation = validateDateExpression(value);
+        return validation.valid;
+    };
+
+    /**
+     * Format a date for display
+     * @param {Date} date - The date to format
+     * @returns {string} Formatted date string (YYYY-MM-DD)
+     */
+    const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    /**
+     * Get the display value with date expression preview if applicable
+     * @param {any} value - The value to display
+     * @returns {string} The formatted display value
+     */
+    const getDisplayValue = (value) => {
+        // Check if it's a date expression
+        if (isDateExpression(value)) {
+            try {
+                const evaluatedDate = evaluateDateExpression(value);
+                return `${value} (${formatDate(evaluatedDate)})`;
+            } catch (error) {
+                // If evaluation fails, just show the expression
+                return value;
+            }
+        }
+        return value;
+    };
+
     // Build condition summary text
     const conditionSummary = () => {
         if (operator === 'isEmpty' || operator === 'isNotEmpty') {
@@ -72,7 +118,9 @@ function LogicNode({ data, isConnectable }) {
             return `${fieldKey} ${operatorLabels[operator]} [Answer from Question]`;
         }
         
-        return `${fieldKey} ${operatorLabels[operator]} ${expectedValue}`;
+        // Use the display value which includes date expression preview
+        const displayValue = getDisplayValue(expectedValue);
+        return `${fieldKey} ${operatorLabels[operator]} ${displayValue}`;
     };
 
     return (
