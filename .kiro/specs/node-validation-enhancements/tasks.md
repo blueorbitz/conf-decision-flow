@@ -229,18 +229,19 @@
   - **Property 21: Select field execution**
   - **Validates: Requirements 4.13, 4.14, 5.4**
 
-- [ ] 10. Copy date utilities to frontend
+- [x] 10. Copy date utilities to frontend
+
   - Copy date expression parser and evaluator to admin-page and issue-panel
   - Ensure consistent behavior between frontend and backend
   - _Requirements: All date-related requirements_
 
-- [ ] 10.1 Copy utilities to admin-page
+- [x] 10.1 Copy utilities to admin-page
   - Copy dateExpressionParser.js to static/admin-page/src/utils/
   - Copy dateExpressionEvaluator.js to static/admin-page/src/utils/
   - Verify imports work correctly
   - _Requirements: All date-related requirements_
 
-- [ ] 10.2 Copy utilities to issue-panel
+- [x] 10.2 Copy utilities to issue-panel
   - Copy dateExpressionParser.js to static/issue-panel/src/utils/
   - Copy dateExpressionEvaluator.js to static/issue-panel/src/utils/
   - Verify imports work correctly
@@ -259,6 +260,10 @@
   - Use date comparison logic from backend
   - Display evaluated dates in UI for debugging
   - _Requirements: 1.5, 2.1, 2.2, 2.3_
+
+- [ ] 12.2 Update QuestionnaireView to display readable field name
+  - Replace displaying field key or id with `${field.name} (${field.key || field.id})`
+  - Apply this for Logic and Action node only.
 
 - [ ] 13. Add error handling and user feedback
   - Implement comprehensive error handling for all new features
