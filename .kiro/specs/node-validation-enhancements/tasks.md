@@ -1,18 +1,11 @@
 # Implementation Plan
 
 - [x] 1. Create date expression utilities
-
-
-
-
-
   - Create date expression parser and evaluator utilities that will be shared between frontend and backend
   - Implement support for relative dates, date functions, and combined expressions
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 1.8, 1.9_
 
 - [x] 1.1 Implement date expression parser
-
-
   - Write parser function to validate and parse date expressions
   - Support relative format: "{number}{unit}"
   - Support function format: "today()", "startofweek()", etc.
@@ -26,8 +19,6 @@
   - **Validates: Requirements 1.1, 1.2, 1.3**
 
 - [x] 1.3 Implement date expression evaluator
-
-
   - Write evaluator function to convert expressions to absolute dates
   - Implement relative date calculation (add days/weeks/months/years)
   - Implement date functions (today, startofweek, endofweek, etc.)
@@ -56,14 +47,14 @@
   - **Property 31: Invalid syntax error messaging**
   - **Validates: Requirements 8.1, 8.2, 8.3, 8.4, 8.5, 8.6**
 
-- [ ] 2. Create field metadata fetcher utility (Frontend)
+- [x] 2. Create field metadata fetcher utility (Frontend)
   - Create utility to fetch Jira field metadata using requestJira from @forge/bridge
   - Detect field types (date, select, text, number, etc.)
   - Fetch select field options
   - Implement caching to minimize API calls
   - _Requirements: 5.1_
 
-- [ ] 2.1 Implement field metadata fetcher
+- [x] 2.1 Implement field metadata fetcher
   - Write function to call Jira REST API /rest/api/3/field
   - Parse field schema to determine field type
   - Extract select field options from configuration
@@ -74,7 +65,7 @@
   - **Property 18: Select field options fetching**
   - **Validates: Requirements 5.1**
 
-- [ ] 2.3 Implement field metadata caching
+- [x] 2.3 Implement field metadata caching
   - Add caching layer with 5-minute TTL
   - Use component state for cache storage
   - Implement cache key format: "field-metadata:{projectKey}:{fieldKey}"
