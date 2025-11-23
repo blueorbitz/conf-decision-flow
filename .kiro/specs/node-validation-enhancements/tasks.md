@@ -187,13 +187,13 @@
   - Prevent saving until resolved
   - _Requirements: 6.2_
 
-- [ ] 9. Update backend execution logic
+- [x] 9. Update backend execution logic
   - Enhance backend resolvers to support date expressions and Question node references
   - Update Logic node evaluation
   - Update Action node execution
   - _Requirements: 1.5, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.3, 4.13, 4.14, 5.4_
 
-- [ ] 9.1 Update evaluateLogicNode resolver
+- [x] 9.1 Update evaluateLogicNode resolver
   - Add date expression evaluation for expectedValue
   - Support Question node references (valueSource: "question")
   - Implement date comparison operators (equals, greaterThan, lessThan, isEmpty, isNotEmpty)
@@ -208,7 +208,7 @@
   - **Property 14: Date comparison operator consistency**
   - **Validates: Requirements 2.1, 2.2, 2.3, 2.5, 3.3**
 
-- [ ] 9.3 Update submitAnswer resolver
+- [x] 9.3 Update submitAnswer resolver
   - Store date answers as Date objects in execution state
   - Validate date format from user input
   - _Requirements: 3.1_
@@ -217,7 +217,7 @@
   - **Property 12: Question node date storage**
   - **Validates: Requirements 3.1**
 
-- [ ] 9.5 Update setIssueField action
+- [x] 9.5 Update setIssueField action
   - Add date expression evaluation before API call
   - Format date according to Jira requirements (YYYY-MM-DD)
   - Handle select field values

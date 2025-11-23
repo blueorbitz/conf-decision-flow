@@ -1,6 +1,8 @@
 import Resolver from '@forge/resolver';
 import api, { route } from '@forge/api';
 import { storage } from '@forge/api';
+import { evaluateDateExpression } from './utils/dateExpressionEvaluator.js';
+import { parseDateExpression } from './utils/dateExpressionParser.js';
 
 const resolver = new Resolver();
 
@@ -90,9 +92,16 @@ function findNextNode(currentNodeId, edges, edgeLabel = null, currentNode = null
  * @param {any} fieldValue - The actual field value from the issue
  * @param {string} operator - Comparison operator
  * @param {any} expectedValue - The expected value to compare against
+ * @param {boolean} isDateComparison - Whether this is a date field comparison
  * @returns {boolean} Result of the comparison
  */
-function evaluateCondition(fieldValue, operator, expectedValue) {
+function evaluateCondition(fieldValue, operator, expectedValue, isDateComparison = false) {
+    // Handle date comparisons specially
+    if (isDateComparison) {
+        return evaluateDateCondition(fieldValue, operator, expectedValue);
+    }
+
+    // Standard comparisons for non-date fields
     switch (operator) {
         case 'equals':
             return fieldValue == expectedValue;
@@ -110,6 +119,101 @@ function evaluateCondition(fieldValue, operator, expectedValue) {
             return !!(fieldValue && fieldValue !== '' && fieldValue !== null && (!Array.isArray(fieldValue) || fieldValue.length > 0));
         default:
             console.error(`Unknown operator: ${operator}`);
+            return false;
+    }
+}
+
+/**
+ * Evaluate a date comparison condition
+ * @param {any} fieldValue - The date field value from the issue (ISO string or Date)
+ * @param {string} operator - Comparison operator
+ * @param {any} expectedValue - The expected date value (ISO string, Date, or date expression)
+ * @returns {boolean} Result of the date comparison
+ */
+function evaluateDateCondition(fieldValue, operator, expectedValue) {
+    // Handle isEmpty and isNotEmpty operators
+    if (operator === 'isEmpty') {
+        return !fieldValue || fieldValue === '' || fieldValue === null;
+    }
+    
+    if (operator === 'isNotEmpty') {
+        return !!(fieldValue && fieldValue !== '' && fieldValue !== null);
+    }
+
+    // For other operators, we need both values to be valid dates
+    if (!fieldValue) {
+        console.log('Field value is empty, comparison returns false');
+        return false;
+    }
+
+    // Parse the field value to a Date object
+    let fieldDate;
+    try {
+        fieldDate = new Date(fieldValue);
+        if (isNaN(fieldDate.getTime())) {
+            console.error('Invalid field date value:', fieldValue);
+            return false;
+        }
+    } catch (error) {
+        console.error('Error parsing field date:', error);
+        return false;
+    }
+
+    // Parse the expected value to a Date object
+    // It could be a date expression, ISO string, or Date object
+    let expectedDate;
+    try {
+        // Check if it's a date expression (contains functions or units)
+        if (typeof expectedValue === 'string' && 
+            (expectedValue.includes('()') || /\d+[dwmy]/.test(expectedValue))) {
+            // Evaluate the date expression
+            expectedDate = evaluateDateExpression(expectedValue);
+            console.log(`Evaluated date expression "${expectedValue}" to ${expectedDate.toISOString()}`);
+        } else {
+            // Parse as a regular date
+            expectedDate = new Date(expectedValue);
+            if (isNaN(expectedDate.getTime())) {
+                console.error('Invalid expected date value:', expectedValue);
+                return false;
+            }
+        }
+    } catch (error) {
+        console.error('Error parsing expected date:', error);
+        return false;
+    }
+
+    // Normalize dates to day level for equals comparison
+    // This ensures that dates with different times but same day are considered equal
+    const normalizeToDay = (date) => {
+        const normalized = new Date(date);
+        normalized.setHours(0, 0, 0, 0);
+        return normalized;
+    };
+
+    // Perform the comparison based on operator
+    switch (operator) {
+        case 'equals':
+            // Compare at day level (ignore time component)
+            const fieldDay = normalizeToDay(fieldDate);
+            const expectedDay = normalizeToDay(expectedDate);
+            return fieldDay.getTime() === expectedDay.getTime();
+        
+        case 'notEquals':
+            // Compare at day level (ignore time component)
+            const fieldDay2 = normalizeToDay(fieldDate);
+            const expectedDay2 = normalizeToDay(expectedDate);
+            return fieldDay2.getTime() !== expectedDay2.getTime();
+        
+        case 'greaterThan':
+            // Field date is after expected date
+            return fieldDate.getTime() > expectedDate.getTime();
+        
+        case 'lessThan':
+            // Field date is before expected date
+            return fieldDate.getTime() < expectedDate.getTime();
+        
+        default:
+            console.error(`Unsupported date comparison operator: ${operator}`);
             return false;
     }
 }
@@ -372,7 +476,29 @@ resolver.define('submitAnswer', async (req) => {
 
         // Store the answer (if applicable)
         if (answer !== null && answer !== undefined) {
-            state.answers[nodeId] = answer;
+            // For date question nodes, store the answer as a Date object
+            if (currentNode.type === 'question' && currentNode.data.questionType === 'date') {
+                try {
+                    // Validate and convert the date string to a Date object
+                    const dateAnswer = new Date(answer);
+                    
+                    // Check if the date is valid
+                    if (isNaN(dateAnswer.getTime())) {
+                        console.error(`Invalid date format provided: ${answer}`);
+                        return { error: 'Invalid date format. Please provide a valid date.' };
+                    }
+                    
+                    // Store as ISO string for consistency with Jira date fields
+                    state.answers[nodeId] = dateAnswer.toISOString();
+                    console.log(`Stored date answer for node ${nodeId}: ${state.answers[nodeId]}`);
+                } catch (dateError) {
+                    console.error('Error parsing date answer:', dateError);
+                    return { error: 'Invalid date format. Please provide a valid date.' };
+                }
+            } else {
+                // For non-date questions, store the answer as-is
+                state.answers[nodeId] = answer;
+            }
         }
         state.path.push(nodeId);
 
@@ -539,6 +665,31 @@ async function evaluateLogicNodeInternal(issueKey, logicNode, context, flowId = 
         const fieldValue = issue.fields[fieldKey];
         console.log(`Field ${fieldKey} value:`, fieldValue);
 
+        // Determine if this is a date field by checking the field schema
+        let isDateField = false;
+        try {
+            // Fetch field metadata to determine field type
+            const fieldResponse = await api.asUser().requestJira(route`/rest/api/3/field`, {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (fieldResponse.ok) {
+                const fields = await fieldResponse.json();
+                const fieldMetadata = fields.find(f => f.id === fieldKey || f.key === fieldKey);
+                
+                if (fieldMetadata && fieldMetadata.schema) {
+                    // Check if the field type is date or datetime
+                    isDateField = fieldMetadata.schema.type === 'date' || 
+                                  fieldMetadata.schema.type === 'datetime';
+                    console.log(`Field ${fieldKey} is date field: ${isDateField}`);
+                }
+            }
+        } catch (fieldError) {
+            console.warn('Could not fetch field metadata, assuming non-date field:', fieldError);
+        }
+
         // Determine the comparison value
         let comparisonValue = expectedValue;
         
@@ -555,8 +706,8 @@ async function evaluateLogicNodeInternal(issueKey, logicNode, context, flowId = 
             }
         }
 
-        // Evaluate condition
-        const result = evaluateCondition(fieldValue, operator, comparisonValue);
+        // Evaluate condition with date awareness
+        const result = evaluateCondition(fieldValue, operator, comparisonValue, isDateField);
         console.log(`Condition evaluation: ${fieldValue} ${operator} ${comparisonValue} = ${result}`);
 
         return result;
@@ -604,12 +755,74 @@ async function executeAction(issueKey, actionNode, answers, context) {
  * Update a Jira issue field
  * @param {string} issueKey - The Jira issue key
  * @param {string} fieldKey - The field key to update
- * @param {any} value - The new field value
+ * @param {any} value - The new field value (can be a date expression for date fields)
  * @returns {Object} Result object
  */
 async function setIssueField(issueKey, fieldKey, value) {
     try {
         console.log(`Setting field ${fieldKey} to ${value} on issue ${issueKey}`);
+
+        // Determine if this is a date field and if the value is a date expression
+        let processedValue = value;
+        
+        try {
+            // Fetch field metadata to determine field type
+            const fieldResponse = await api.asUser().requestJira(route`/rest/api/3/field`, {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (fieldResponse.ok) {
+                const fields = await fieldResponse.json();
+                const fieldMetadata = fields.find(f => f.id === fieldKey || f.key === fieldKey);
+                
+                if (fieldMetadata && fieldMetadata.schema) {
+                    const isDateField = fieldMetadata.schema.type === 'date' || 
+                                        fieldMetadata.schema.type === 'datetime';
+                    
+                    // If it's a date field and the value looks like a date expression
+                    if (isDateField && typeof value === 'string') {
+                        // Check if it's a date expression (contains functions or units)
+                        if (value.includes('()') || /\d+[dwmy]/.test(value)) {
+                            try {
+                                // Evaluate the date expression
+                                const evaluatedDate = evaluateDateExpression(value);
+                                console.log(`Evaluated date expression "${value}" to ${evaluatedDate.toISOString()}`);
+                                
+                                // Format date according to Jira requirements (YYYY-MM-DD)
+                                const year = evaluatedDate.getFullYear();
+                                const month = String(evaluatedDate.getMonth() + 1).padStart(2, '0');
+                                const day = String(evaluatedDate.getDate()).padStart(2, '0');
+                                processedValue = `${year}-${month}-${day}`;
+                                
+                                console.log(`Formatted date for Jira: ${processedValue}`);
+                            } catch (evalError) {
+                                console.error('Error evaluating date expression:', evalError);
+                                // If evaluation fails, try to use the value as-is
+                                // Jira will reject it if it's invalid
+                            }
+                        } else {
+                            // It's a date field but not an expression, ensure proper format
+                            try {
+                                const dateValue = new Date(value);
+                                if (!isNaN(dateValue.getTime())) {
+                                    const year = dateValue.getFullYear();
+                                    const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+                                    const day = String(dateValue.getDate()).padStart(2, '0');
+                                    processedValue = `${year}-${month}-${day}`;
+                                    console.log(`Formatted date for Jira: ${processedValue}`);
+                                }
+                            } catch (dateError) {
+                                console.warn('Could not parse date value, using as-is:', dateError);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (fieldError) {
+            console.warn('Could not fetch field metadata, using value as-is:', fieldError);
+        }
 
         const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueKey}`, {
             method: 'PUT',
@@ -619,7 +832,7 @@ async function setIssueField(issueKey, fieldKey, value) {
             },
             body: JSON.stringify({
                 fields: {
-                    [fieldKey]: value
+                    [fieldKey]: processedValue
                 }
             })
         });
@@ -631,7 +844,7 @@ async function setIssueField(issueKey, fieldKey, value) {
         }
 
         console.log('Field updated successfully');
-        return { success: true, data: { fieldKey, value } };
+        return { success: true, data: { fieldKey, value: processedValue } };
     } catch (error) {
         console.error('Error setting field:', error);
         return { success: false, error: error.message };
