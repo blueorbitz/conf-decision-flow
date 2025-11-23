@@ -109,13 +109,13 @@
   - **Property 20: Select field value storage**
   - **Validates: Requirements 5.2, 5.3**
 
-- [ ] 5. Update NodePropertiesPanel for Logic nodes
+- [x] 5. Update NodePropertiesPanel for Logic nodes
   - Enhance Logic node configuration to support date expressions
   - Add date expression input for date field comparisons
   - Support Question node references for comparison values
   - _Requirements: 1.1, 1.2, 1.3, 3.2, 3.4_
 
-- [ ] 5.1 Add date expression support to Logic node panel
+- [x] 5.1 Add date expression support to Logic node panel
   - Detect when fieldKey is a date field
   - Render DateExpressionInput for expectedValue
   - Add option to select Question node as value source
@@ -126,7 +126,9 @@
   - **Property 13: Question node reference retrieval**
   - **Validates: Requirements 3.4**
 
-- [ ] 6. Update NodePropertiesPanel for Action nodes
+- [-] 6. Update NodePropertiesPanel for Action nodes
+
+
   - Enhance Action node configuration to support date expressions and select fields
   - Dynamically render appropriate input based on field type
   - _Requirements: 4.1, 5.1, 5.2_

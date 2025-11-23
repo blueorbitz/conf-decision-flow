@@ -9,6 +9,8 @@ import SectionMessage from '@atlaskit/section-message';
 import { Box, Stack, Flex, Text } from '@atlaskit/primitives';
 import { token } from '@atlaskit/tokens';
 import CrossIcon from '@atlaskit/icon/core/cross';
+import DateExpressionInput from './DateExpressionInput.jsx';
+import { getFieldMetadata } from '../utils/fieldMetadata.js';
 
 /**
  * NodePropertiesPanel Component
@@ -43,6 +45,10 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
     const [jiraFields, setJiraFields] = useState([]);
     const [isLoadingFields, setIsLoadingFields] = useState(false);
     const [fieldLoadError, setFieldLoadError] = useState(null);
+    
+    // State for field metadata (for Logic nodes with date fields)
+    const [fieldMetadata, setFieldMetadata] = useState(null);
+    const [isLoadingFieldMetadata, setIsLoadingFieldMetadata] = useState(false);
 
     /**
      * Fetch Jira fields from the API
@@ -126,6 +132,33 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
             setFormData(selectedNode.data || {});
         }
     }, [selectedNode]);
+
+    /**
+     * Fetch field metadata when fieldKey changes for Logic nodes
+     * This determines if the field is a date field to show DateExpressionInput
+     */
+    useEffect(() => {
+        // Only fetch metadata for Logic nodes with a fieldKey
+        if (selectedNode?.type !== 'logic' || !formData.fieldKey) {
+            setFieldMetadata(null);
+            return;
+        }
+
+        const fetchFieldMetadata = async () => {
+            setIsLoadingFieldMetadata(true);
+            try {
+                const metadata = await getFieldMetadata(formData.fieldKey);
+                setFieldMetadata(metadata);
+            } catch (error) {
+                console.error('Error fetching field metadata:', error);
+                setFieldMetadata(null);
+            } finally {
+                setIsLoadingFieldMetadata(false);
+            }
+        };
+
+        fetchFieldMetadata();
+    }, [selectedNode?.type, formData.fieldKey]);
 
     /**
      * Handle form field changes and update node data in real-time
@@ -310,7 +343,16 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                     ? selectedNode.flowNodes.filter(n => n.type === 'question')
                     : [];
                 
-                const questionNodeOptions = questionNodes.map(node => ({
+                // Determine if we're working with a date field
+                const isDateField = fieldMetadata?.fieldType === 'date';
+                
+                // Filter question nodes based on field type
+                // For date fields, only show date questions
+                const filteredQuestionNodes = isDateField
+                    ? questionNodes.filter(n => n.data.questionType === 'date')
+                    : questionNodes;
+                
+                const questionNodeOptions = filteredQuestionNodes.map(node => ({
                     label: node.data.question || `Question ${node.id}`,
                     value: node.id
                 }));
@@ -358,6 +400,7 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                                 marginTop: token('space.050')
                             }}>
                                 Select the Jira field to evaluate
+                                {isLoadingFieldMetadata && ' (Detecting field type...)'}
                             </div>
                         </Box>
 
@@ -420,19 +463,42 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                                         }}>
                                             Expected Value *
                                         </label>
-                                        <Textfield
-                                            id="expected-value"
-                                            value={formData.expectedValue || ''}
-                                            onChange={(e) => handleFieldChange('expectedValue', e.target.value)}
-                                            placeholder="Enter value to compare against"
-                                        />
-                                        <div style={{
-                                            fontSize: '11px',
-                                            color: token('color.text.subtlest'),
-                                            marginTop: token('space.050')
-                                        }}>
-                                            The value to compare the field against
-                                        </div>
+                                        
+                                        {/* Show DateExpressionInput for date fields */}
+                                        {isDateField ? (
+                                            <>
+                                                <DateExpressionInput
+                                                    value={formData.expectedValue || ''}
+                                                    onChange={(value) => handleFieldChange('expectedValue', value)}
+                                                    placeholder="e.g., 7d, today(), startofweek() + 3d"
+                                                    isRequired={true}
+                                                    testId="logic-expected-value"
+                                                />
+                                                <div style={{
+                                                    fontSize: '11px',
+                                                    color: token('color.text.subtlest'),
+                                                    marginTop: token('space.050')
+                                                }}>
+                                                    Enter a date expression (e.g., 7d, today(), startofweek() + 3d)
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Textfield
+                                                    id="expected-value"
+                                                    value={formData.expectedValue || ''}
+                                                    onChange={(e) => handleFieldChange('expectedValue', e.target.value)}
+                                                    placeholder="Enter value to compare against"
+                                                />
+                                                <div style={{
+                                                    fontSize: '11px',
+                                                    color: token('color.text.subtlest'),
+                                                    marginTop: token('space.050')
+                                                }}>
+                                                    The value to compare the field against
+                                                </div>
+                                            </>
+                                        )}
                                     </Box>
                                 )}
 
@@ -447,20 +513,42 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                                         }}>
                                             Question Node *
                                         </label>
+                                        
+                                        {/* Show info message if no compatible questions available */}
+                                        {isDateField && filteredQuestionNodes.length === 0 && (
+                                            <Box style={{
+                                                padding: token('space.150'),
+                                                backgroundColor: token('color.background.information'),
+                                                borderRadius: token('border.radius'),
+                                                fontSize: '12px',
+                                                marginBottom: token('space.100')
+                                            }}>
+                                                No date questions available. Add a Question node with type "Date" to use this option.
+                                            </Box>
+                                        )}
+                                        
                                         <Select
                                             inputId="question-node-id"
                                             options={questionNodeOptions}
                                             value={questionNodeOptions.find(opt => opt.value === formData.questionNodeId)}
                                             onChange={(option) => handleFieldChange('questionNodeId', option ? option.value : '')}
-                                            placeholder="Select a question node"
+                                            placeholder={
+                                                isDateField && filteredQuestionNodes.length === 0
+                                                    ? "No date questions available"
+                                                    : "Select a question node"
+                                            }
                                             isClearable={true}
+                                            isDisabled={isDateField && filteredQuestionNodes.length === 0}
                                         />
                                         <div style={{
                                             fontSize: '11px',
                                             color: token('color.text.subtlest'),
                                             marginTop: token('space.050')
                                         }}>
-                                            Select the question whose answer will be used for comparison
+                                            {isDateField 
+                                                ? 'Select a date question whose answer will be used for comparison'
+                                                : 'Select the question whose answer will be used for comparison'
+                                            }
                                         </div>
                                     </Box>
                                 )}
