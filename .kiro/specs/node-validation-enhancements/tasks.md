@@ -71,13 +71,13 @@
   - Implement cache key format: "field-metadata:{projectKey}:{fieldKey}"
   - _Requirements: 5.1_
 
-- [ ] 3. Create DateExpressionInput component
+- [x] 3. Create DateExpressionInput component
   - Create reusable component for date expression input with validation and preview
   - Show real-time validation errors
   - Display preview of evaluated date
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 8.7_
 
-- [ ] 3.1 Implement DateExpressionInput component
+- [x] 3.1 Implement DateExpressionInput component
   - Create component with Textfield from @atlaskit/textfield
   - Add real-time validation using date expression validator
   - Display validation errors inline
