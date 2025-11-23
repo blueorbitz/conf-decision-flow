@@ -2,8 +2,8 @@ import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { token } from '@atlaskit/tokens';
 import { Text } from '@atlaskit/primitives';
-import { validateDateExpression } from '../utils/dateExpressionValidator.js';
-import { evaluateDateExpression } from '../utils/dateExpressionEvaluator.js';
+import { validateDateExpression } from '../../utils/dateExpressionValidator.js';
+import { evaluateDateExpression } from '../../utils/dateExpressionEvaluator.js';
 
 /**
  * LogicNode Component

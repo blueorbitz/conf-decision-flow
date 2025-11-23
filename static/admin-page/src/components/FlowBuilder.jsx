@@ -63,6 +63,7 @@ function FlowBuilder({ flowId, onCancel }) {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [error, setError] = useState(null);
     const [saveError, setSaveError] = useState(null);
+    const [startNodeError, setStartNodeError] = useState(null);
 
     // Counter for generating unique node IDs
     const [nodeIdCounter, setNodeIdCounter] = useState(1);
@@ -94,6 +95,12 @@ function FlowBuilder({ flowId, onCancel }) {
                 });
                 setNodes(flow.nodes || []);
                 setEdges(flow.edges || []);
+
+                // Validate that at most one Start node exists
+                const startNodes = (flow.nodes || []).filter(n => n.type === 'start');
+                if (startNodes.length > 1) {
+                    setStartNodeError('Warning: Flow contains multiple Start nodes. Please remove duplicates before saving.');
+                }
 
                 // Update node ID counter to avoid conflicts
                 const maxId = Math.max(
@@ -279,6 +286,20 @@ function FlowBuilder({ flowId, onCancel }) {
      * @param {string} nodeType - Type of node to add (start, question, logic, action)
      */
     const addNode = (nodeType) => {
+        // Check if adding Start node and one already exists
+        if (nodeType === 'start') {
+            const existingStartNode = nodes.find(n => n.type === 'start');
+            if (existingStartNode) {
+                // Show error message
+                setStartNodeError('Only one Start node is allowed per flow');
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    setStartNodeError(null);
+                }, 5000);
+                return;
+            }
+        }
+
         const id = `${nodeType}-${nodeIdCounter}`;
         setNodeIdCounter(nodeIdCounter + 1);
 
@@ -363,6 +384,13 @@ function FlowBuilder({ flowId, onCancel }) {
 
         if (!flowMetadata.projectKeys || flowMetadata.projectKeys.length === 0) {
             setSaveError('Please bind the flow to at least one project in Settings before saving.');
+            return;
+        }
+
+        // Validate that at most one Start node exists
+        const startNodes = nodes.filter(n => n.type === 'start');
+        if (startNodes.length > 1) {
+            setSaveError('Flow contains multiple Start nodes. Please remove duplicates before saving.');
             return;
         }
 
@@ -513,6 +541,15 @@ function FlowBuilder({ flowId, onCancel }) {
                     <Box padding="space.150">
                         <SectionMessage appearance="error" title="Save failed">
                             <p>{saveError}</p>
+                        </SectionMessage>
+                    </Box>
+                )}
+
+                {/* Start Node Error Message */}
+                {startNodeError && (
+                    <Box padding="space.150">
+                        <SectionMessage appearance="error" title="Cannot add Start node">
+                            <p>{startNodeError}</p>
                         </SectionMessage>
                     </Box>
                 )}

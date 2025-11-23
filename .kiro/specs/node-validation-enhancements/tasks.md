@@ -162,13 +162,13 @@
   - Show expression and preview: "Set duedate to startofweek() (2024-01-08)"
   - _Requirements: 7.3_
 
-- [ ] 8. Implement Start node validation
+- [x] 8. Implement Start node validation
   - Add validation to prevent multiple Start nodes on canvas
   - Display error message when attempting to add duplicate
   - Validate on flow load
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 8.1 Add Start node validation to FlowBuilder
+- [x] 8.1 Add Start node validation to FlowBuilder
   - Modify addNode function to check for existing Start nodes
   - Display error message when duplicate detected
   - Add state for error message display
@@ -181,7 +181,7 @@
   - **Property 25: Start node re-addition after deletion**
   - **Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.5**
 
-- [ ] 8.3 Add Start node validation on flow load
+- [x] 8.3 Add Start node validation on flow load
   - Check nodes array for multiple Start nodes
   - Display warning message if multiple found
   - Prevent saving until resolved
