@@ -126,20 +126,18 @@
   - **Property 13: Question node reference retrieval**
   - **Validates: Requirements 3.4**
 
-- [-] 6. Update NodePropertiesPanel for Action nodes
-
-
+- [x] 6. Update NodePropertiesPanel for Action nodes
   - Enhance Action node configuration to support date expressions and select fields
   - Dynamically render appropriate input based on field type
   - _Requirements: 4.1, 5.1, 5.2_
 
-- [ ] 6.1 Add field type detection to Action node panel
+- [x] 6.1 Add field type detection to Action node panel
   - Fetch field metadata when fieldKey changes
   - Store field type in component state
   - Show loading indicator while fetching
   - _Requirements: 5.1_
 
-- [ ] 6.2 Add dynamic input rendering to Action node panel
+- [x] 6.2 Add dynamic input rendering to Action node panel
   - Render DateExpressionInput for date fields
   - Render SelectFieldDropdown for select fields
   - Render standard Textfield for other fields

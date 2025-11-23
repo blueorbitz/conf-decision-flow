@@ -10,6 +10,7 @@ import { Box, Stack, Flex, Text } from '@atlaskit/primitives';
 import { token } from '@atlaskit/tokens';
 import CrossIcon from '@atlaskit/icon/core/cross';
 import DateExpressionInput from './DateExpressionInput.jsx';
+import SelectFieldDropdown from './SelectFieldDropdown.jsx';
 import { getFieldMetadata } from '../utils/fieldMetadata.js';
 
 /**
@@ -49,6 +50,10 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
     // State for field metadata (for Logic nodes with date fields)
     const [fieldMetadata, setFieldMetadata] = useState(null);
     const [isLoadingFieldMetadata, setIsLoadingFieldMetadata] = useState(false);
+    
+    // State for Action node field metadata (for dynamic input rendering)
+    const [actionFieldMetadata, setActionFieldMetadata] = useState(null);
+    const [isLoadingActionFieldMetadata, setIsLoadingActionFieldMetadata] = useState(false);
 
     /**
      * Fetch Jira fields from the API
@@ -159,6 +164,39 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
 
         fetchFieldMetadata();
     }, [selectedNode?.type, formData.fieldKey]);
+
+    /**
+     * Fetch field metadata when fieldKey changes for Action nodes
+     * This determines the field type to render the appropriate input component
+     * Implements Requirements 5.1 (field type detection)
+     */
+    useEffect(() => {
+        // Only fetch metadata for Action nodes with setField action type and a fieldKey
+        if (selectedNode?.type !== 'action' || formData.actionType !== 'setField' || !formData.fieldKey) {
+            setActionFieldMetadata(null);
+            return;
+        }
+
+        const fetchActionFieldMetadata = async () => {
+            setIsLoadingActionFieldMetadata(true);
+            try {
+                console.log(`[NodePropertiesPanel] Fetching field metadata for Action node field: ${formData.fieldKey}`);
+                const metadata = await getFieldMetadata(formData.fieldKey);
+                console.log(`[NodePropertiesPanel] Field metadata received:`, metadata);
+                setActionFieldMetadata(metadata);
+                
+                // Store field type in node data for reference
+                handleFieldChange('fieldType', metadata.fieldType);
+            } catch (error) {
+                console.error('[NodePropertiesPanel] Error fetching action field metadata:', error);
+                setActionFieldMetadata(null);
+            } finally {
+                setIsLoadingActionFieldMetadata(false);
+            }
+        };
+
+        fetchActionFieldMetadata();
+    }, [selectedNode?.type, formData.actionType, formData.fieldKey]);
 
     /**
      * Handle form field changes and update node data in real-time
@@ -602,6 +640,7 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                         {/* Conditional fields based on action type */}
                         {formData.actionType === 'setField' && (
                             <>
+                                {/* Field Key Selection */}
                                 <Box>
                                     <label htmlFor="action-field-key" style={{
                                         display: 'block',
@@ -627,9 +666,11 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                                         marginTop: token('space.050')
                                     }}>
                                         The Jira field to update
+                                        {isLoadingActionFieldMetadata && ' (Detecting field type...)'}
                                     </div>
                                 </Box>
 
+                                {/* Field Value - Dynamic rendering based on field type */}
                                 <Box>
                                     <label htmlFor="action-field-value" style={{
                                         display: 'block',
@@ -639,19 +680,98 @@ function NodePropertiesPanel({ selectedNode, onUpdateNode, onDeleteNode, onClose
                                     }}>
                                         Field Value *
                                     </label>
-                                    <Textfield
-                                        id="action-field-value"
-                                        value={formData.fieldValue || ''}
-                                        onChange={(e) => handleFieldChange('fieldValue', e.target.value)}
-                                        placeholder="Enter the value to set"
-                                    />
-                                    <div style={{
-                                        fontSize: '11px',
-                                        color: token('color.text.subtlest'),
-                                        marginTop: token('space.050')
-                                    }}>
-                                        The value to set for the field
-                                    </div>
+                                    
+                                    {/* Show loading indicator while detecting field type */}
+                                    {isLoadingActionFieldMetadata && (
+                                        <Box style={{
+                                            padding: token('space.150'),
+                                            backgroundColor: token('color.background.neutral'),
+                                            borderRadius: token('border.radius'),
+                                            fontSize: '12px',
+                                            color: token('color.text.subtlest')
+                                        }}>
+                                            Detecting field type...
+                                        </Box>
+                                    )}
+                                    
+                                    {/* Render DateExpressionInput for date fields (Requirement 4.1) */}
+                                    {!isLoadingActionFieldMetadata && actionFieldMetadata?.fieldType === 'date' && (
+                                        <>
+                                            <DateExpressionInput
+                                                value={formData.fieldValue || ''}
+                                                onChange={(value) => handleFieldChange('fieldValue', value)}
+                                                placeholder="e.g., 7d, today(), startofweek() + 3d"
+                                                isRequired={true}
+                                                testId="action-field-value"
+                                            />
+                                            <div style={{
+                                                fontSize: '11px',
+                                                color: token('color.text.subtlest'),
+                                                marginTop: token('space.050')
+                                            }}>
+                                                Enter a date expression (e.g., 7d, today(), startofweek() + 3d)
+                                            </div>
+                                        </>
+                                    )}
+                                    
+                                    {/* Render SelectFieldDropdown for select fields (Requirement 5.2) */}
+                                    {!isLoadingActionFieldMetadata && (actionFieldMetadata?.fieldType === 'select' || actionFieldMetadata?.fieldType === 'multiselect') && (
+                                        <>
+                                            <SelectFieldDropdown
+                                                fieldKey={formData.fieldKey}
+                                                value={formData.fieldValue || ''}
+                                                onChange={(value) => handleFieldChange('fieldValue', value)}
+                                                placeholder="Select an option"
+                                                isRequired={true}
+                                                testId="action-field-value"
+                                            />
+                                            <div style={{
+                                                fontSize: '11px',
+                                                color: token('color.text.subtlest'),
+                                                marginTop: token('space.050')
+                                            }}>
+                                                Select a value from the available options
+                                            </div>
+                                        </>
+                                    )}
+                                    
+                                    {/* Render standard Textfield for other field types (Requirement 5.2) */}
+                                    {!isLoadingActionFieldMetadata && actionFieldMetadata && actionFieldMetadata.fieldType !== 'date' && actionFieldMetadata.fieldType !== 'select' && actionFieldMetadata.fieldType !== 'multiselect' && (
+                                        <>
+                                            <Textfield
+                                                id="action-field-value"
+                                                value={formData.fieldValue || ''}
+                                                onChange={(e) => handleFieldChange('fieldValue', e.target.value)}
+                                                placeholder="Enter the value to set"
+                                            />
+                                            <div style={{
+                                                fontSize: '11px',
+                                                color: token('color.text.subtlest'),
+                                                marginTop: token('space.050')
+                                            }}>
+                                                The value to set for the field
+                                            </div>
+                                        </>
+                                    )}
+                                    
+                                    {/* Fallback to Textfield if no field selected yet or metadata unavailable */}
+                                    {!isLoadingActionFieldMetadata && !actionFieldMetadata && (
+                                        <>
+                                            <Textfield
+                                                id="action-field-value"
+                                                value={formData.fieldValue || ''}
+                                                onChange={(e) => handleFieldChange('fieldValue', e.target.value)}
+                                                placeholder="Enter the value to set"
+                                            />
+                                            <div style={{
+                                                fontSize: '11px',
+                                                color: token('color.text.subtlest'),
+                                                marginTop: token('space.050')
+                                            }}>
+                                                The value to set for the field
+                                            </div>
+                                        </>
+                                    )}
                                 </Box>
                             </>
                         )}
