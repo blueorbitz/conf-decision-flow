@@ -250,18 +250,18 @@
 - [ ] 11. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 12. Update issue panel for date expressions
+- [x] 12. Update issue panel for date expressions
   - Update QuestionnaireView to handle date expressions in Logic nodes
   - Display evaluated dates in flow execution
   - _Requirements: 1.5, 2.1, 2.2, 2.3_
 
-- [ ] 12.1 Update QuestionnaireView Logic node handling
+- [x] 12.1 Update QuestionnaireView Logic node handling
   - Evaluate date expressions when Logic node is reached
   - Use date comparison logic from backend
   - Display evaluated dates in UI for debugging
   - _Requirements: 1.5, 2.1, 2.2, 2.3_
 
-- [ ] 12.2 Update QuestionnaireView to display readable field name
+- [x] 12.2 Update QuestionnaireView to display readable field name
   - Replace displaying field key or id with `${field.name} (${field.key || field.id})`
   - Apply this for Logic and Action node only.
 

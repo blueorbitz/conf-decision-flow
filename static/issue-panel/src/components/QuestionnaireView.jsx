@@ -11,8 +11,8 @@
  * - Provides reset functionality to restart the flow
  */
 
-import React, { useState, useEffect } from 'react';
-import { invoke } from '@forge/bridge';
+import React, { useState, useEffect, useCallback } from 'react';
+import { invoke, requestJira } from '@forge/bridge';
 import { Box, Stack, Inline } from '@atlaskit/primitives';
 import Button from '@atlaskit/button/new';
 import Spinner from '@atlaskit/spinner';
@@ -22,6 +22,8 @@ import { RadioGroup } from '@atlaskit/radio';
 import { Checkbox } from '@atlaskit/checkbox';
 import { DatePicker } from '@atlaskit/datetime-picker';
 import Heading from '@atlaskit/heading';
+import { evaluateDateExpression } from '../utils/dateExpressionEvaluator.js';
+import { parseDateExpression } from '../utils/dateExpressionParser.js';
 
 function QuestionnaireView({ issueKey, flow, onStateChange }) {
   // State management
@@ -32,52 +34,43 @@ function QuestionnaireView({ issueKey, flow, onStateChange }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-
-  // Load execution state and current node
-  useEffect(() => {
-    loadExecutionState();
-  }, [issueKey, flow.id]);
+  
+  // State for field display names and evaluated dates (for Logic and Action nodes)
+  const [fieldDisplayName, setFieldDisplayName] = useState('');
+  const [evaluatedDate, setEvaluatedDate] = useState(null);
 
   /**
-   * Get a human-readable field name from a field key
+   * Get a human-readable field name from a field key by fetching from Jira API
    * @param {string} fieldKey - The Jira field key
-   * @returns {string} Human-readable field name
+   * @returns {Promise<string>} Human-readable field name in format "Name (key)"
    */
-  const getFieldDisplayName = (fieldKey) => {
-    const fieldNames = {
-      'summary': 'Summary',
-      'description': 'Description',
-      'priority': 'Priority',
-      'status': 'Status',
-      'assignee': 'Assignee',
-      'reporter': 'Reporter',
-      'duedate': 'Due Date',
-      'labels': 'Labels',
-      'components': 'Components',
-      'fixVersions': 'Fix Versions',
-      'issueType': 'Issue Type',
-      'project': 'Project'
-    };
-    return fieldNames[fieldKey] || fieldKey;
-  };
+  const getFieldDisplayName = useCallback(async (fieldKey) => {
+    try {
+      // Fetch field metadata from Jira API
+      const response = await requestJira('/rest/api/3/field', {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
 
-  /**
-   * Get a human-readable operator name
-   * @param {string} operator - The operator key
-   * @returns {string} Human-readable operator
-   */
-  const getOperatorDisplayName = (operator) => {
-    const operatorNames = {
-      'equals': 'equals',
-      'notEquals': 'does not equal',
-      'contains': 'contains',
-      'greaterThan': 'is greater than',
-      'lessThan': 'is less than',
-      'isEmpty': 'is empty',
-      'isNotEmpty': 'is not empty'
-    };
-    return operatorNames[operator] || operator;
-  };
+      const fields = await response.json();
+      
+      // Find the specific field
+      const field = fields.find(f => f.key === fieldKey || f.id === fieldKey);
+      
+      if (field) {
+        // Return in format "Name (key)"
+        return `${field.name} (${field.key || field.id})`;
+      }
+      
+      // Fallback to just the field key if not found
+      return fieldKey;
+    } catch (error) {
+      console.error('Error fetching field metadata:', error);
+      // Fallback to field key on error
+      return fieldKey;
+    }
+  }, []);
 
   /**
    * Load the current execution state for this issue and flow
@@ -131,6 +124,110 @@ function QuestionnaireView({ issueKey, flow, onStateChange }) {
       setError(err.message || 'Failed to load questionnaire');
       setLoading(false);
     }
+  };
+
+  // Load execution state and current node on mount and when issueKey or flow.id changes
+  useEffect(() => {
+    loadExecutionState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [issueKey, flow.id]);
+
+  // Load field display name and evaluate date expressions for Logic and Action nodes
+  useEffect(() => {
+    const loadFieldInfo = async () => {
+      if (!currentNode) {
+        setFieldDisplayName('');
+        setEvaluatedDate(null);
+        return;
+      }
+
+      // Handle Logic nodes
+      if (currentNode.type === 'logic') {
+        const { fieldKey, expectedValue } = currentNode.data;
+        
+        // Fetch readable field name
+        const displayName = await getFieldDisplayName(fieldKey);
+        setFieldDisplayName(displayName);
+
+        // Check if expectedValue is a date expression and evaluate it
+        if (expectedValue && typeof expectedValue === 'string') {
+          try {
+            const parseResult = parseDateExpression(expectedValue);
+            if (parseResult.valid) {
+              // It's a date expression, evaluate it
+              const evaluated = evaluateDateExpression(expectedValue);
+              setEvaluatedDate(evaluated);
+              console.log(`[Logic Node] Evaluated date expression "${expectedValue}" to ${evaluated.toISOString()}`);
+            } else {
+              setEvaluatedDate(null);
+            }
+          } catch (err) {
+            console.error('Error evaluating date expression:', err);
+            setEvaluatedDate(null);
+          }
+        } else {
+          setEvaluatedDate(null);
+        }
+      }
+      // Handle Action nodes
+      else if (currentNode.type === 'action') {
+        const { actionType, fieldKey, fieldValue } = currentNode.data;
+        
+        if (actionType === 'setField' && fieldKey) {
+          // Fetch readable field name
+          const displayName = await getFieldDisplayName(fieldKey);
+          setFieldDisplayName(displayName);
+
+          // Check if fieldValue is a date expression and evaluate it
+          if (fieldValue && typeof fieldValue === 'string') {
+            try {
+              const parseResult = parseDateExpression(fieldValue);
+              if (parseResult.valid) {
+                // It's a date expression, evaluate it
+                const evaluated = evaluateDateExpression(fieldValue);
+                setEvaluatedDate(evaluated);
+                console.log(`[Action Node] Evaluated date expression "${fieldValue}" to ${evaluated.toISOString()}`);
+              } else {
+                setEvaluatedDate(null);
+              }
+            } catch (err) {
+              console.error('Error evaluating date expression:', err);
+              setEvaluatedDate(null);
+            }
+          } else {
+            setEvaluatedDate(null);
+          }
+        } else {
+          setFieldDisplayName('');
+          setEvaluatedDate(null);
+        }
+      }
+      // For other node types, clear the state
+      else {
+        setFieldDisplayName('');
+        setEvaluatedDate(null);
+      }
+    };
+
+    loadFieldInfo();
+  }, [currentNode, getFieldDisplayName]);
+
+  /**
+   * Get a human-readable operator name
+   * @param {string} operator - The operator key
+   * @returns {string} Human-readable operator
+   */
+  const getOperatorDisplayName = (operator) => {
+    const operatorNames = {
+      'equals': 'equals',
+      'notEquals': 'does not equal',
+      'contains': 'contains',
+      'greaterThan': 'is greater than',
+      'lessThan': 'is less than',
+      'isEmpty': 'is empty',
+      'isNotEmpty': 'is not empty'
+    };
+    return operatorNames[operator] || operator;
   };
 
   /**
@@ -422,7 +519,6 @@ function QuestionnaireView({ issueKey, flow, onStateChange }) {
   // Logic node - user must manually trigger evaluation
   if (currentNode.type === 'logic') {
     const { fieldKey, operator, expectedValue, valueSource, questionNodeId } = currentNode.data;
-    const fieldName = getFieldDisplayName(fieldKey);
     const operatorName = getOperatorDisplayName(operator);
 
     // Determine what value will be used for comparison
@@ -436,25 +532,40 @@ function QuestionnaireView({ issueKey, flow, onStateChange }) {
       if (answerValue !== undefined && answerValue !== null) {
         comparisonDescription = (
           <>
-            The flow will check if the issue's <strong>{fieldName}</strong> field {operatorName} your answer to "{questionText}" 
+            The flow will check if the issue's <strong>{fieldDisplayName}</strong> field {operatorName} your answer to "{questionText}" 
             (which was: <strong>{Array.isArray(answerValue) ? answerValue.join(', ') : answerValue}</strong>).
           </>
         );
       } else {
         comparisonDescription = (
           <>
-            The flow will check if the issue's <strong>{fieldName}</strong> field {operatorName} your answer to "{questionText}".
+            The flow will check if the issue's <strong>{fieldDisplayName}</strong> field {operatorName} your answer to "{questionText}".
           </>
         );
       }
     } else {
       // Static value comparison
-      comparisonDescription = (
-        <>
-          The flow will check if the issue's <strong>{fieldName}</strong> field {operatorName}
-          {expectedValue && ` "${expectedValue}"`}.
-        </>
-      );
+      // If we have an evaluated date, show both the expression and the evaluated date
+      if (evaluatedDate) {
+        const formattedDate = evaluatedDate.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        });
+        comparisonDescription = (
+          <>
+            The flow will check if the issue's <strong>{fieldDisplayName}</strong> field {operatorName} <strong>{expectedValue}</strong>
+            {' '}(evaluates to: <strong>{formattedDate}</strong>).
+          </>
+        );
+      } else {
+        comparisonDescription = (
+          <>
+            The flow will check if the issue's <strong>{fieldDisplayName}</strong> field {operatorName}
+            {expectedValue && ` "${expectedValue}"`}.
+          </>
+        );
+      }
     }
 
     return (
@@ -514,7 +625,17 @@ function QuestionnaireView({ issueKey, flow, onStateChange }) {
     let actionDescription = '';
     switch (actionType) {
       case 'setField':
-        actionDescription = `Set field "${getFieldDisplayName(fieldKey)}" to "${fieldValue}"`;
+        // If we have an evaluated date, show both the expression and the evaluated date
+        if (evaluatedDate) {
+          const formattedDate = evaluatedDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          });
+          actionDescription = `Set field "${fieldDisplayName}" to ${fieldValue} (evaluates to: ${formattedDate})`;
+        } else {
+          actionDescription = `Set field "${fieldDisplayName}" to "${fieldValue}"`;
+        }
         break;
       case 'addLabel':
         actionDescription = `Add label "${label}" to the issue`;
