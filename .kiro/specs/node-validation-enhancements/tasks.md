@@ -91,13 +91,13 @@
   - **Property 32: Valid expression success indication**
   - **Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5, 8.7**
 
-- [ ] 4. Create SelectFieldDropdown component
+- [x] 4. Create SelectFieldDropdown component
   - Create reusable component for select field dropdown
   - Fetch options from Jira using requestJira
   - Handle loading and error states
   - _Requirements: 5.1, 5.2, 5.3, 5.5_
 
-- [ ] 4.1 Implement SelectFieldDropdown component
+- [x] 4.1 Implement SelectFieldDropdown component
   - Create component with Select from @atlaskit/select
   - Fetch field options using field metadata fetcher
   - Show loading spinner while fetching
