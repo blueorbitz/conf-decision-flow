@@ -13,9 +13,10 @@ This app provides two main interfaces:
 
 **PS: Only for the Hackathon Judge for evaluation.**
 
-- Login to Atlassian using this [instance](https://decisionflowdemo.atlassian.net/jira/for-you)
+- Login to Atlassian using this [instance](https://decisionflowdemo.atlassian.net/jira/for-you).
   - Email: decisionflowdemo@monthmail.com
-  - Password: xsUU90wpX4We6DcS
+  - Password: `xsUU90wpX4We6DcS` -- Intentional, will expired in 1 months time.
+  - Click continue without "two step verification"
   - PS: You may need the email's MFA to login. For that, go to [MonthMail](https://monthmail.com), and edit the email to match the email below:
 - Quick link to access to the product:
   - [Admin Page](https://decisionflowdemo.atlassian.net/jira/settings/apps/7342c3eb-9504-43fc-bdbf-d7bf32e7dce7/a8577110-235f-42ba-8d3b-1eccdaf8ab09) for setup and configuration.
