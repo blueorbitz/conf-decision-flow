@@ -9,6 +9,18 @@ This app provides two main interfaces:
 1. **Admin Page**: Visual flow builder where admins create decision trees with questions, logic branches, and automated actions
 2. **Issue Panel**: User-facing questionnaire interface that guides users through flows and executes Jira actions based on their responses
 
+### Kiroween Hackathon Demo
+
+**PS: Only for the Hackathon Judge for evaluation.**
+
+- Login to Atlassian using this [instance](https://decisionflowdemo.atlassian.net/jira/for-you)
+  - Email: decisionflowdemo@monthmail.com
+  - Password: xsUU90wpX4We6DcS
+  - PS: You may need the email's MFA to login. For that, go to [MonthMail](https://monthmail.com), and edit the email to match the email below:
+- Quick link to access to the product:
+  - [Admin Page](https://decisionflowdemo.atlassian.net/jira/settings/apps/7342c3eb-9504-43fc-bdbf-d7bf32e7dce7/a8577110-235f-42ba-8d3b-1eccdaf8ab09) for setup and configuration.
+  - [Issue Page - DEMO-1](https://decisionflowdemo.atlassian.net/browse/DEMO-1) to explore the questionnaire feature.
+
 ## Features
 
 - **Visual Flow Builder**: Drag-and-drop interface using React Flow for creating decision trees
